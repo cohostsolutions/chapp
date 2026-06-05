@@ -61,20 +61,6 @@ export function ReportingSummaryCards() {
       color: 'text-chart-4',
     },
   ];
-            subValue: `+${formatCurrency(data.revenueThisMonth)} this month`,
-            icon: Coins,
-            trend: data.revenueThisMonth > 0 ? 'up' : 'neutral',
-            color: 'text-chart-3',
-          },
-          {
-            title: 'AI Booked Appointments',
-            value: data.totalAIBookedAppointments,
-            subValue: `+${data.aiBookedAppointmentsThisMonth} this month`,
-            icon: Calendar,
-            trend: data.aiBookedAppointmentsThisMonth > 0 ? 'up' : 'neutral',
-            color: 'text-chart-4',
-          },
-        ];
 
   return (
     <div className="grid grid-cols-2 gap-2 md:gap-4 lg:grid-cols-4">
