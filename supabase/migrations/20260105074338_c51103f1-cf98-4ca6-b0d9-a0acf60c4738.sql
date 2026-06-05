@@ -1,0 +1,3 @@
+-- Note: Storage bucket policies for chat-attachments must be configured
+-- directly in the Supabase dashboard under Storage > Policies.
+-- storage.objects is a Supabase-managed system table and cannot be modified via migrations.

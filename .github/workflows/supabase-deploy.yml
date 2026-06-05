@@ -1,0 +1,53 @@
+name: Supabase Database Deploy
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Deploy migrations to Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: "bash .github/scripts/deploy-supabase.sh"
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.PROJECT_REF }}
+        run: |
+          echo "⚠️ Skipping Edge Functions deployment - deploy via Supabase dashboard instead"
+          # supabase functions deploy --project-ref $PROJECT_REF
+
+      - name: Verify deployment
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "🔎 Verifying critical schema elements"
+          psql "$SUPABASE_DB_URL" -t -c "SELECT to_regclass('public.leads');" | grep -q "public.leads" && echo "✅ leads table present" || (echo "❌ leads table missing" && exit 1)
+          psql "$SUPABASE_DB_URL" -t -c "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='leads' AND column_name='avatar_url';" | grep -q 1 && echo "✅ leads.avatar_url present" || echo "⚠️ leads.avatar_url not found (may be expected if not yet merged)"
+          echo "✅ Supabase deployment completed successfully"

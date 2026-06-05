@@ -1,0 +1,53 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - region "Notifications (F8)":
+    - list [ref=e4]:
+      - listitem [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Unable to send reset
+          - generic [ref=e8]: Network error. Please check your connection and try again.
+        - button [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+  - link "Skip to main content" [ref=e14] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e15]:
+    - complementary "AlCor Nexus product overview" [ref=e16]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - img "AlCor Nexus Logo" [ref=e22]
+          - heading "AlCor Nexus" [level=1] [ref=e23]
+        - heading "Your AI-Powered Customer Engagement Workspace" [level=2] [ref=e24]:
+          - text: Your AI-Powered
+          - text: Customer Engagement Workspace
+        - paragraph [ref=e25]: Manage AI agents, customer conversations, bookings, and follow-up workflows from one workspace.
+    - main "Sign in form" [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - heading "Welcome back" [level=2] [ref=e29]
+          - paragraph [ref=e30]: Enter your credentials to access your workspace
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - text: Email
+            - textbox "Email" [ref=e33]:
+              - /placeholder: you@example.com
+              - text: e2e-test@example.com
+          - generic [ref=e34]:
+            - text: Password
+            - generic [ref=e35]:
+              - textbox "Password" [ref=e36]:
+                - /placeholder: ••••••••
+              - button "Show password" [ref=e37] [cursor=pointer]:
+                - img [ref=e38]
+          - button "Forgot password?" [ref=e42] [cursor=pointer]:
+            - generic [ref=e43]: Forgot password?
+          - button "Sign In" [ref=e44] [cursor=pointer]
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: Contact your administrator if you need access
+          - link "Back to Home" [ref=e47] [cursor=pointer]:
+            - /url: /
+            - img [ref=e48]
+            - text: Back to Home
+```

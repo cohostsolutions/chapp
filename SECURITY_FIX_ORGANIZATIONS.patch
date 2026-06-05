@@ -1,0 +1,36 @@
+--- a/src/pages/Organizations.tsx
++++ b/src/pages/Organizations.tsx
+@@ -203,7 +203,7 @@ export default function Organizations() {
+   const confirmDelete = async () => {
+     if (!selectedOrg) return;
+     
+     setDeleting(true);
+     try {
+-      // Cascade delete associated data first
++      // ✅ SECURE: Use Edge Function with server-side role verification
++      const { data, error } = await supabase.functions.invoke('delete-organization', {
++        body: { organizationId: selectedOrg.id }
++      });
++
++      if (error) throw error;
++
++      /* OLD INSECURE CODE - REMOVED:
++      // ❌ INSECURE: Frontend-only deletion with no server-side role check
+       const deletePromises = [
+         supabase.from('leads').delete().eq('organization_id', selectedOrg.id),
+         supabase.from('bookings').delete().eq('organization_id', selectedOrg.id),
+@@ -246,10 +246,11 @@ export default function Organizations() {
+         .from('profiles')
+         .update({ organization_id: null })
+         .eq('organization_id', selectedOrg.id);
+ 
+       await supabase.from('organizations').delete().eq('id', selectedOrg.id);
++      */
+       
+       toast({
+         title: 'Organization deleted',
+-        description: 'The organization and all associated data have been permanently deleted.',
++        description: `The organization and all associated data have been permanently deleted. ${data?.summary ? `Deleted: ${data.summary.leads_deleted} leads, ${data.summary.bookings_deleted} bookings, ${data.summary.orders_deleted} orders.` : ''}`,
+       });
+       
+       refetch();

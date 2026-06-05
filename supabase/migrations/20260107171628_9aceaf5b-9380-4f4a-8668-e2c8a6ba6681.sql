@@ -1,0 +1,3 @@
+-- Add AI Handback Criteria column to organizations table
+ALTER TABLE organizations 
+ADD COLUMN IF NOT EXISTS ai_handback_criteria jsonb DEFAULT '{"enabled": false, "criteria_prompt": "", "examples": ["Customer confirms their issue is resolved", "Customer thanks the agent and says goodbye", "Agent explicitly hands back to AI", "Conversation has been idle for a specified period", "Customer requests to speak with AI again"], "auto_notify": true}'::jsonb;

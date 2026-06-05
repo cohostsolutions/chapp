@@ -1,0 +1,2 @@
+-- Create rate limits table
+-- Remote migration 20251209 - placeholder for existing remote state

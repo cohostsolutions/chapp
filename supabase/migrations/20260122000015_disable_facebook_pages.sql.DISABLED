@@ -1,0 +1,9 @@
+-- Disable Facebook pages as requested by client admins
+-- Page 292239804598387: GuilCor Agrimac
+-- Page 720467844479248: CDO Stays & Condos by Coco
+
+UPDATE facebook_pages 
+SET 
+  is_enabled = false,
+  updated_at = now()
+WHERE page_id IN ('292239804598387', '720467844479248');

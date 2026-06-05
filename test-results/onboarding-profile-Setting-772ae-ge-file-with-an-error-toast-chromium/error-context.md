@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - status [ref=e5]
+    - navigation "Main navigation" [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - img [ref=e10]
+            - generic [ref=e11]: AlCor CRM
+          - button "Collapse sidebar" [expanded] [ref=e12] [cursor=pointer]:
+            - img
+        - navigation "Sidebar navigation" [ref=e13]
+        - button [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]:
+            - img
+          - generic:
+            - paragraph
+            - paragraph
+    - banner [ref=e18]:
+      - toolbar "Header actions" [ref=e19]:
+        - button "Help & Support" [ref=e20] [cursor=pointer]:
+          - img
+        - 'button "Current theme: system. Click to change theme" [ref=e21] [cursor=pointer]':
+          - img
+          - generic [ref=e22]: Toggle theme
+        - button "Notifications" [ref=e23] [cursor=pointer]:
+          - img
+        - generic [ref=e25]:
+          - img [ref=e26]
+          - generic [ref=e29]: Agent
+    - main "Main content" [ref=e30]
+    - button [ref=e33] [cursor=pointer]:
+      - img
+```

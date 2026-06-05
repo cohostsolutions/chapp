@@ -1,0 +1,300 @@
+/**
+ * Focus Indicator Styles
+ * Provides visible focus indicators for keyboard navigation (A11Y-002)
+ * WCAG 2.1 SC 2.4.7 - Focus Visible
+ */
+
+/* ========================================
+   Focus Indicator Configuration
+   ======================================== */
+
+:root {
+  /* Focus indicator colors */
+  --focus-color: #0066cc;
+  --focus-outline-width: 3px;
+  --focus-outline-offset: 2px;
+  
+  /* High contrast mode for accessibility */
+  --focus-color-hc: #000;
+  --focus-bg-hc: #ffff00;
+}
+
+/* ========================================
+   Global Focus Styles
+   ======================================== */
+
+/* Default focus for all interactive elements */
+:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* Remove default browser focus outline for non-keyboard navigation */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ========================================
+   Interactive Element Focus Styles
+   ======================================== */
+
+/* Buttons */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: 0 0 0 var(--focus-outline-width) rgba(0, 102, 204, 0.25);
+}
+
+/* Links */
+a:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  border-radius: 2px;
+}
+
+/* Form inputs */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  border-color: var(--focus-color);
+}
+
+/* Checkboxes and radio buttons */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* Custom select/dropdown */
+[role="combobox"]:focus-visible,
+[role="listbox"]:focus-visible,
+[role="menu"]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* Tabs */
+[role="tab"]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: -4px;
+}
+
+/* ========================================
+   Data Attribute Focus (JavaScript)
+   ======================================== */
+
+/* For elements with data-focus-visible attribute */
+[data-focus-visible="true"] {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  border-radius: 2px;
+}
+
+/* ========================================
+   Modal/Dialog Focus Trap Indicators
+   ======================================== */
+
+/* Dialog with focus trap */
+dialog:focus-visible {
+  outline: none;
+}
+
+/* First focusable element in dialog */
+dialog [tabindex="0"]:first-of-type:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* ========================================
+   Skip Link (Accessibility)
+   ======================================== */
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus-visible {
+  top: 0;
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: 0;
+}
+
+/* ========================================
+   High Contrast Mode Support
+   ======================================== */
+
+@media (prefers-contrast: more) {
+  :focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-color-hc);
+    outline-offset: var(--focus-outline-offset);
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-color-hc);
+    outline-offset: var(--focus-outline-offset);
+    background-color: var(--focus-bg-hc);
+  }
+}
+
+/* ========================================
+   Forced Colors Mode Support (Windows High Contrast)
+   ======================================== */
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline: 3px solid Highlight;
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
+/* ========================================
+   Reduced Motion Support
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :focus-visible {
+    outline-width: 3px;
+    outline-offset: 2px;
+    /* No transitions or animations */
+  }
+}
+
+/* ========================================
+   Light Mode Focus Styles
+   ======================================== */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --focus-color: #0066cc;
+  }
+
+  :focus-visible {
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.25);
+  }
+}
+
+/* ========================================
+   Dark Mode Focus Styles
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --focus-color: #4da6ff;
+  }
+
+  :focus-visible {
+    box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.25);
+  }
+}
+
+/* ========================================
+   Component-Specific Focus Styles
+   ======================================== */
+
+/* Navigation items */
+nav a:focus-visible,
+[role="navigation"] a:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  background-color: rgba(0, 102, 204, 0.1);
+  border-radius: 4px;
+}
+
+/* Table cells */
+td:focus-visible,
+th:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: -2px;
+}
+
+/* List items */
+li[tabindex]:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  background-color: rgba(0, 102, 204, 0.05);
+}
+
+/* ========================================
+   Focus Visible Utility Class
+   ======================================== */
+
+.focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-color);
+  outline-offset: var(--focus-outline-offset);
+  border-radius: 2px;
+}
+
+.focus-visible-dark {
+  outline: 3px solid white;
+  outline-offset: 2px;
+}
+
+/* ========================================
+   Accessibility: Focus Order Indicators
+   ======================================== */
+
+/* Optional: Visual focus order numbers (for testing) */
+.show-focus-order:focus-visible::after {
+  content: attr(data-focus-order);
+  position: absolute;
+  top: -25px;
+  left: 0;
+  background: var(--focus-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* ========================================
+   Disabled Elements Should Not Be Focusable
+   ======================================== */
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"],
+[disabled] {
+  outline: none;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+  :focus-visible {
+    outline: none;
+  }
+}

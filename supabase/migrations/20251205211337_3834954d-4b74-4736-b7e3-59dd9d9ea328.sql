@@ -1,0 +1,11 @@
+-- Fix knowledge-base storage bucket RLS to enforce organization isolation
+-- NOTE: storage.objects is a Supabase-managed system table and RLS policies
+-- cannot be modified via migrations. Configure storage policies directly in
+-- the Supabase dashboard under Storage > Policies.
+--
+-- Desired policy (for reference):
+-- CREATE POLICY "Users can view knowledge base files in their organization"
+-- ON storage.objects FOR SELECT
+-- USING (bucket_id = 'knowledge-base' AND ...)
+--
+-- For now, we skip storage policy modifications in migrations.

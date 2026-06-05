@@ -1,0 +1,575 @@
+/**
+ * Touch Target Styling
+ * Ensures all interactive elements meet WCAG 2.5.5 Target Size (AAA)
+ * Minimum 48x48 CSS pixels for touch targets
+ */
+
+/* Base touch target sizing for all interactive elements */
+button,
+a,
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+input[type='file'],
+input[type='checkbox'],
+input[type='radio'],
+select,
+textarea,
+[role='button'],
+[role='link'],
+[role='menuitem'],
+[role='tab'],
+[role='checkbox'],
+[role='radio'],
+[role='switch'],
+[role='slider'],
+[role='spinbutton'],
+[role='gridcell'] {
+  /* Minimum touch target height and width */
+  min-height: 48px;
+  min-width: 48px;
+
+  /* Add padding to ensure minimum size is met */
+  padding: 12px 16px;
+
+  /* Ensure consistent touch interaction */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Buttons - primary touch target */
+button,
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+[role='button'] {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px 20px;
+  line-height: 1.5;
+}
+
+/* Links - ensure adequate touch target */
+a,
+[role='link'] {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px 4px;
+  display: inline-block;
+  line-height: 1.5;
+}
+
+/* Form controls - adequate touch targets */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='url'],
+input[type='tel'],
+input[type='number'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'],
+select,
+textarea {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px;
+  font-size: 16px; /* Prevents auto-zoom on iOS */
+}
+
+/* Checkboxes and radios - increase touch target area */
+input[type='checkbox'],
+input[type='radio'],
+[role='checkbox'],
+[role='radio'] {
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 4px;
+}
+
+/* Custom checkbox/radio styling */
+input[type='checkbox']::before,
+input[type='radio']::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+input[type='radio']::before {
+  border-radius: 50%;
+}
+
+/* Checkbox/radio checked state */
+input[type='checkbox']:checked::before {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+input[type='radio']:checked::before {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Menu items - adequate touch targets */
+[role='menuitem'],
+[role='option'] {
+  min-height: 48px;
+  padding: 12px 16px;
+  display: block;
+  width: 100%;
+}
+
+/* Tab elements - adequate touch targets */
+[role='tab'] {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Switch toggle - adequate touch target */
+[role='switch'] {
+  min-height: 48px;
+  min-width: 48px;
+  position: relative;
+}
+
+/* Slider - adequate touch target */
+[role='slider'] {
+  min-height: 48px;
+  min-width: 200px;
+  display: block;
+}
+
+/* Grid cells - adequate touch target */
+[role='gridcell'] {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px;
+}
+
+/* Spacing between touch targets - minimum 8px */
+button + button,
+button + input[type='button'],
+input[type='button'] + button,
+input[type='button'] + input[type='button'],
+input[type='submit'] + button,
+button + input[type='submit'],
+[role='menuitem'] + [role='menuitem'],
+[role='tab'] + [role='tab'],
+a + a,
+[role='button'] + [role='button'] {
+  margin-left: 8px;
+}
+
+/* Vertical spacing for stacked buttons */
+button[display='block'],
+input[type='button'][display='block'],
+input[type='submit'][display='block'] {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* Button groups - spacing */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button-group button,
+.button-group input[type='button'],
+.button-group input[type='submit'],
+.button-group [role='button'] {
+  flex: 1;
+  min-width: 48px;
+}
+
+/* Vertical button groups */
+.button-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-group-vertical button,
+.button-group-vertical input[type='button'],
+.button-group-vertical input[type='submit'],
+.button-group-vertical [role='button'] {
+  width: 100%;
+}
+
+/* Navigation lists - adequate spacing */
+nav ul,
+nav ol,
+[role='navigation'] ul,
+[role='navigation'] ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav li,
+nav a,
+[role='navigation'] li,
+[role='navigation'] a {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+nav li + li,
+[role='navigation'] li + li {
+  margin-top: 8px;
+}
+
+/* Toolbar items - adequate spacing */
+[role='toolbar'] {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+[role='toolbar'] button,
+[role='toolbar'] [role='button'] {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Icon buttons - maintain 48x48 minimum */
+button.icon,
+[role='button'].icon {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+button.icon svg,
+[role='button'].icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Close button - common interactive element */
+button.close,
+[aria-label='Close'] {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* List item click targets */
+li button,
+li [role='button'],
+li a {
+  min-height: 48px;
+  width: 100%;
+}
+
+/* Card click targets */
+.card button,
+.card [role='button'],
+.card a {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Heading links */
+h1 a,
+h2 a,
+h3 a,
+h4 a,
+h5 a,
+h6 a {
+  padding: 8px 4px;
+  min-height: 48px;
+  min-width: 48px;
+  display: inline-block;
+}
+
+/* Breadcrumb navigation */
+.breadcrumb {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.breadcrumb a,
+.breadcrumb [role='button'] {
+  padding: 12px 8px;
+  min-height: 48px;
+  min-width: 48px;
+  display: inline-block;
+}
+
+.breadcrumb li {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pagination a,
+.pagination button {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropdown menus */
+.dropdown-menu,
+[role='menu'] {
+  min-width: 48px;
+}
+
+.dropdown-menu [role='menuitem'],
+.dropdown-menu a {
+  min-height: 48px;
+  padding: 12px 16px;
+  display: block;
+  width: 100%;
+}
+
+/* Modal dialogs - close button */
+[role='dialog'] button.close,
+.modal-close {
+  min-height: 48px;
+  min-width: 48px;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* Combobox options */
+[role='listbox'] [role='option'],
+[role='combobox'] [role='option'] {
+  min-height: 48px;
+  padding: 12px 16px;
+  display: block;
+}
+
+/* Mobile-specific enhancements */
+@media (max-width: 768px) {
+  /* Increase touch targets on mobile */
+  button,
+  a,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  [role='button'],
+  [role='link'],
+  [role='menuitem'] {
+    min-height: 56px;
+    min-width: 56px;
+  }
+
+  /* Increase spacing on mobile */
+  button + button,
+  button + input[type='button'],
+  input[type='button'] + button,
+  input[type='button'] + input[type='button'] {
+    margin-left: 12px;
+  }
+
+  .button-group {
+    gap: 12px;
+  }
+
+  /* Ensure adequate margin for stacked elements */
+  button,
+  input[type='button'],
+  input[type='submit'] {
+    margin-bottom: 12px;
+  }
+
+  /* Full-width buttons on mobile */
+  .button-group-vertical button,
+  .button-group-vertical input[type='button'],
+  .button-group-vertical input[type='submit'] {
+    min-height: 56px;
+  }
+
+  /* Toolbar items spacing */
+  [role='toolbar'] {
+    gap: 12px;
+  }
+
+  [role='toolbar'] button,
+  [role='toolbar'] [role='button'] {
+    min-height: 56px;
+    min-width: 56px;
+  }
+}
+
+/* Tablet-specific adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  button,
+  input[type='button'],
+  input[type='submit'],
+  [role='button'] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Hover/active states - ensure visual feedback */
+button:hover,
+input[type='button']:hover,
+input[type='submit']:hover,
+[role='button']:hover,
+a:hover {
+  background-color: var(--color-primary-light);
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+button:active,
+input[type='button']:active,
+input[type='submit']:active,
+[role='button']:active,
+a:active {
+  background-color: var(--color-primary-dark);
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+/* Focus states - keyboard navigation */
+button:focus-visible,
+input[type='button']:focus-visible,
+input[type='submit']:focus-visible,
+[role='button']:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Disabled state - maintain minimum size */
+button:disabled,
+input[type='button']:disabled,
+input[type='submit']:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[role='button'][aria-disabled='true'],
+[role='link'][aria-disabled='true'] {
+  min-height: 48px;
+  min-width: 48px;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading state - maintain touch target */
+button.loading,
+input[type='button'].loading,
+input[type='submit'].loading,
+[role='button'].loading {
+  min-height: 48px;
+  min-width: 48px;
+  position: relative;
+}
+
+button.loading:after,
+input[type='button'].loading:after,
+input[type='submit'].loading:after,
+[role='button'].loading:after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin-top: -10px;
+  margin-left: -10px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Print styles - maintain spacing */
+@media print {
+  button,
+  input[type='button'],
+  input[type='submit'],
+  [role='button'] {
+    min-height: 0;
+    min-width: 0;
+    padding: 2px 4px;
+    margin: 2px;
+  }
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  button,
+  input[type='button'],
+  input[type='submit'],
+  [role='button'],
+  a,
+  [role='link'] {
+    forced-color-adjust: none;
+    border: 2px solid CanvasText;
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  button:focus-visible,
+  input[type='button']:focus-visible,
+  input[type='submit']:focus-visible,
+  a:focus-visible {
+    outline: 3px solid CanvasText;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  button.loading:after,
+  input[type='button'].loading:after,
+  input[type='submit'].loading:after,
+  [role='button'].loading:after {
+    animation: none;
+    border-top-color: var(--color-primary);
+  }
+}

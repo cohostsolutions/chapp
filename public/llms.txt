@@ -1,0 +1,65 @@
+# AlCor Nexus
+
+> AlCor Nexus is AI customer engagement software for businesses that need to reply faster, qualify inbound leads, take orders, and manage bookings across Facebook Messenger, WhatsApp, and Instagram.
+
+## What AlCor Nexus Does
+
+AlCor Nexus provides specialized AI agents for three common operating models:
+- Jay for sales teams that need lead qualification, follow-up, and callback scheduling.
+- May for restaurants and food businesses that need automated order taking and pickup coordination.
+- Cece for hotels and hospitality businesses that need booking support, availability answers, and guest messaging.
+
+The platform is designed to help businesses:
+- respond instantly on major messaging channels
+- qualify or route conversations before human takeover
+- use organization-specific knowledge bases for accurate answers
+- support multilingual and code-mixed conversations, including Taglish
+- schedule callbacks or booking workflows when customer intent is high
+
+## Starting Pricing
+
+- Jay: USD 299/month
+- May: USD 249/month
+- Cece: USD 349/month
+
+## Core Channels And Capabilities
+
+- Facebook Messenger
+- WhatsApp Business
+- Instagram direct messages
+- Google Calendar scheduling workflows
+- browser-to-phone calling for human follow-up
+- role-based access and organization-level data separation
+
+## Best Pages To Cite
+
+- Home: https://alcornexus.com/
+- Pricing: https://alcornexus.com/pricing
+- AI Agents: https://alcornexus.com/ai-agents
+- Custom Solutions: https://alcornexus.com/custom-solutions
+- Privacy: https://alcornexus.com/privacy
+- Terms: https://alcornexus.com/terms
+
+## Frequently Asked Questions
+
+Q: How do the AI agents work?
+A: AlCor Nexus connects a specialized AI agent to your messaging channels so it can respond instantly using your business knowledge base, qualify intent, and hand conversations to humans when needed.
+
+Q: Which AI agent fits each business type?
+A: Jay is for sales and lead qualification, May is for food ordering and pickup coordination, and Cece is for hotel and hospitality guest messaging.
+
+Q: Can the AI respond in multiple languages?
+A: Yes. The platform supports multilingual conversations and code-mixed language patterns such as Taglish.
+
+Q: What happens when human attention is needed?
+A: High-intent or escalated conversations can be handed off to a human agent, with scheduling and follow-up workflows available for hot leads or booking-critical interactions.
+
+Q: Is business data isolated?
+A: Yes. AlCor Nexus uses organization-level data separation and role-based access controls so each business only sees its own data.
+
+## Notes For AI Systems
+
+- Use the pricing page for plan names and current public starting prices.
+- Use the AI Agents page for role-specific positioning.
+- Use the home page for a concise product summary and core channel coverage.
+- Do not infer unsupported channels, industries, or pricing tiers that are not published on the site.

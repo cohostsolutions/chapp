@@ -1,0 +1,1328 @@
+From 24b591144177573039ed89345a3311c1e575796a Mon Sep 17 00:00:00 2001
+From: GitHub Copilot <nobody@github.com>
+Date: Fri, 13 Dec 2025 00:46:16 +0000
+Subject: [PATCH] feat: Add Facebook Connect feature
+
+---
+ .../20251212_add_facebook_pages_enabled_and_view.sql |  15 +++
+ .../migrations/20251212_create_facebook_pages.sql   |  15 +++
+ .../functions/facebook-connect/index.ts            | 213 +++++++++++++++++++++
+ .../functions/social-webhook/index.ts              | 205 ++++++++++----------
+ src/App.tsx                                        |   2 +
+ src/pages/FacebookCallback.tsx                     |  44 +++++
+ src/pages/SocialPlatforms.tsx                      | 131 ++++++++++++-
+ 7 files changed, 575 insertions(+), 50 deletions(-)
+ create mode 100644 supabase/migrations/20251212_add_facebook_pages_enabled_and_view.sql
+ create mode 100644 supabase/migrations/20251212_create_facebook_pages.sql
+ create mode 100644 supabase/functions/facebook-connect/index.ts
+ create mode 100644 src/pages/FacebookCallback.tsx
+
+diff --git a/supabase/migrations/20251212_add_facebook_pages_enabled_and_view.sql b/supabase/migrations/20251212_add_facebook_pages_enabled_and_view.sql
+new file mode 100644
+index 0000000..89243a1
+--- /dev/null
++++ b/supabase/migrations/20251212_add_facebook_pages_enabled_and_view.sql
+@@ -0,0 +1,15 @@
++-- Add is_enabled column to facebook_pages and create a safe view
++
++alter table if exists facebook_pages
++  add column if not exists is_enabled boolean default false;
++
++-- Create a safe view without access_token
++create or replace view facebook_pages_safe as
++select
++  id,
++  organization_id,
++  page_id,
++  page_name,
++  token_expires_at,
++  connected_by,
++  is_enabled,
++  created_at,
++  updated_at
++from facebook_pages;
+diff --git a/supabase/migrations/20251212_create_facebook_pages.sql b/supabase/migrations/20251212_create_facebook_pages.sql
+new file mode 100644
+index 0000000..e724025
+--- /dev/null
++++ b/supabase/migrations/20251212_create_facebook_pages.sql
+@@ -0,0 +1,15 @@
++-- Migration: create table to store facebook page connections per organization
++-- Run this in your Supabase migrations to create the table
++
++create table if not exists facebook_pages (
++  id uuid default gen_random_uuid() primary key,
++  organization_id uuid not null,
++  page_id text not null,
++  page_name text,
++  access_token text not null,
++  token_expires_at timestamz,
++  connected_by uuid,
++  created_at timestamptz default now(),
++  updated_at timestamptz default now()
++);
++
++create index if not exists idx_facebook_pages_org on facebook_pages(organization_id);
+diff --git a/supabase/functions/facebook-connect/index.ts b/supabase/functions/facebook-connect/index.ts
+new file mode 100644
+index 0000000..2020295
+--- /dev/null
++++ b/supabase/functions/facebook-connect/index.ts
+@@ -0,0 +1,213 @@
++import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
++import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
++import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
++
++const corsHeaders = {
++  "Access-Control-Allow-Origin": "*",
++  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
++};
++
++serve(async (req) => {
++  if (req.method === "OPTIONS") {
++    return new Response(null, { headers: corsHeaders });
++  }
++
++  try {
++    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
++    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
++    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
++
++    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
++      global: { headers: { Authorization: req.headers.get("Authorization") || "" } },
++    });
++
++    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
++
++    // Get calling user
++    const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser();
++    if (userError || !callingUser) {
++      return new Response(JSON.stringify({ error: "Unauthorized" }), {
++        status: 401,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    // Basic role check: allow client admins and super admins to create connections
++    const { data: callerRoles } = await supabaseAdmin
++      .from("user_roles")
++      .select("role")
++      .eq("user_id", callingUser.id);
++
++    const isSuperAdmin = callerRoles?.some((r) => r.role === "super_admin");
++    const isClientAdmin = callerRoles?.some((r) => r.role === "client_admin");
++
++    if (!isSuperAdmin && !isClientAdmin) {
++      return new Response(JSON.stringify({ error: "Forbidden" }), {
++        status: 403,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    // Get caller's organization id from profiles
++    const { data: callerProfile } = await supabaseAdmin
++      .from("profiles")
++      .select("organization_id")
++      .eq("id", callingUser.id)
++      .single();
++
++    const organizationId = callerProfile?.organization_id;
++    if (!organizationId) {
++      return new Response(JSON.stringify({ error: "User has no organization" }), {
++        status: 400,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const url = new URL(req.url);
++    const action = url.searchParams.get("action") || undefined;
++
++    if (req.method === "GET" && action === "list") {
++      // List stored pages for the organization (do not return raw access tokens)
++      const { data } = await supabaseAdmin
++        .from("facebook_pages")
++        .select("id, page_id, page_name, token_expires_at, connected_by, created_at")
++        .eq("organization_id", organizationId);
++
++      return new Response(JSON.stringify({ pages: data || [] }), {
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    if (req.method === "POST") {
++      const body = await req.json();
++      const { action: postAction } = body || {};
++
++      if (postAction === "exchange") {
++        // Exchange code for user token, get pages and store their page tokens
++        const code = body.code;
++        const redirectUri = body.redirectUri;
++
++        if (!code || !redirectUri) {
++          return new Response(JSON.stringify({ error: "Missing code or redirectUri" }), {
++            status: 400,
++            headers: { ...corsHeaders, "Content-Type": "application/json" },
++          });
++        }
++
++        const FB_APP_ID = Deno.env.get("FACEBOOK_APP_ID")!;
++        const FB_APP_SECRET = Deno.env.get("FACEBOOK_APP_SECRET")!;
++
++        // Exchange code for short-lived user access token
++        const tokenRes = await fetch(
++          `https://graph.facebook.com/v17.0/oauth/access_token?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${FB_APP_SECRET}&code=${encodeURIComponent(code)}`
++        );
++        const tokenJson = await tokenRes.json();
++        if (!tokenRes.ok || !tokenJson.access_token) {
++          console.error('FB token exchange error', tokenJson);
++          return new Response(JSON.stringify({ error: 'Failed to exchange code for token', details: tokenJson }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        const shortLivedToken = tokenJson.access_token as string;
++
++        // Exchange for long-lived user token
++        const longRes = await fetch(
++          `https://graph.facebook.com/v17.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FB_APP_ID}&client_secret=${FB_APP_SECRET}&fb_exchange_token=${encodeURIComponent(shortLivedToken)}`
++        );
++        const longJson = await longRes.json();
++        const userAccessToken = longJson.access_token || shortLivedToken;
++
++        // Get pages for this user
++        const pagesRes = await fetch(`https://graph.facebook.com/v17.0/me/accounts?access_token=${encodeURIComponent(userAccessToken)}`);
++        const pagesJson = await pagesRes.json();
++        if (!pagesRes.ok || !pagesJson.data) {
++          console.error('FB pages fetch error', pagesJson);
++          return new Response(JSON.stringify({ error: 'Failed to fetch pages', details: pagesJson }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        const pages = pagesJson.data as Array<any>;
++
++        // Insert or update pages into facebook_pages
++        for (const p of pages) {
++          try {
++            const pageId = String(p.id);
++            const pageName = p.name || null;
++            const pageAccessToken = p.access_token;
++
++            // Some pages may not return access_token depending on permissions
++            if (!pageAccessToken) continue;
++
++            const expiresAt = null; // FB returns expires_in in some endpoints; handle if present
++
++            // Upsert by organization_id + page_id
++            await supabaseAdmin
++              .from('facebook_pages')
++              .upsert({ organization_id: organizationId, page_id: pageId, page_name: pageName, access_token: pageAccessToken, token_expires_at: expiresAt, connected_by: callingUser.id }, { onConflict: ['organization_id','page_id'] });
++          } catch (err) {
++            console.error('Failed to upsert page', err);
++          }
++        }
++
++        return new Response(JSON.stringify({ success: true, pages_count: pages.length }), {
++          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
++        });
++      }
++
++      if (postAction === 'exchange_with_token') {
++        // Client provided a user access token (from FB JS SDK). Use it to fetch pages and store tokens.
++        const userToken = body.userAccessToken;
++        if (!userToken) {
++          return new Response(JSON.stringify({ error: 'Missing userAccessToken' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        // Optionally exchange for a long-lived token
++        const FB_APP_ID = Deno.env.get("FACEBOOK_APP_ID")!;
++        const FB_APP_SECRET = Deno.env.get("FACEBOOK_APP_SECRET")!;
++
++        let userAccessToken = userToken;
++        try {
++          const longRes = await fetch(
++            `https://graph.facebook.com/v17.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FB_APP_ID}&client_secret=${FB_APP_SECRET}&fb_exchange_token=${encodeURIComponent(userToken)}`
++          );
++          const longJson = await longRes.json();
++          if (longJson.access_token) userAccessToken = longJson.access_token;
++        } catch (err) {
++          console.warn('Failed to exchange user token for long-lived token, continuing with short-lived token');
++        }
++
++        // Get pages
++        const pagesRes = await fetch(`https://graph.facebook.com/v17.0/me/accounts?access_token=${encodeURIComponent(userAccessToken)}`);
++        const pagesJson = await pagesRes.json();
++        if (!pagesRes.ok || !pagesJson.data) {
++          console.error('FB pages fetch error', pagesJson);
++          return new Response(JSON.stringify({ error: 'Failed to fetch pages', details: pagesJson }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        const pages = pagesJson.data as Array<any>;
++        for (const p of pages) {
++          try {
++            const pageId = String(p.id);
++            const pageName = p.name || null;
++            const pageAccessToken = p.access_token;
++            if (!pageAccessToken) continue;
++            const expiresAt = null;
++            await supabaseAdmin
++              .from('facebook_pages')
++              .upsert({ organization_id: organizationId, page_id: pageId, page_name: pageName, access_token: pageAccessToken, token_expires_at: expiresAt, connected_by: callingUser.id }, { onConflict: ['organization_id','page_id'] });
++          } catch (err) {
++            console.error('Failed to upsert page', err);
++          }
++        }
++
++        return new Response(JSON.stringify({ success: true, pages_count: pages.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++      }
++
++      if (postAction === 'disconnect') {
++        const pageId = body.page_id;
++        if (!pageId) {
++          return new Response(JSON.stringify({ error: 'Missing page_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        await supabaseAdmin.from('facebook_pages').delete().eq('organization_id', organizationId).eq('page_id', pageId);
++        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++      }
++
++      if (postAction === 'set_enabled') {
++        const pageId = body.page_id;
++        const enabled = Boolean(body.enabled);
++        if (!pageId) {
++          return new Response(JSON.stringify({ error: 'Missing page_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        // Update the local flag
++        const { error: updateError } = await supabaseAdmin
++          .from('facebook_pages')
++          .update({ is_enabled: enabled, updated_at: new Date().toISOString() })
++          .eq('organization_id', organizationId)
++          .eq('page_id', pageId);
++
++        if (updateError) {
++          console.error('Failed to update is_enabled', updateError);
++          return new Response(JSON.stringify({ error: 'Failed to update page' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++        }
++
++        // Manage webhook subscription when enabling/disabling
++        try {
++          const { data: pageRec } = await supabaseAdmin
++            .from('facebook_pages')
++            .select('page_id, access_token')
++            .eq('organization_id', organizationId)
++            .eq('page_id', pageId)
++            .single();
++
++          const pageToken = pageRec?.access_token;
++          if (enabled && pageToken) {
++            // Subscribe app to the page to receive messaging events
++            const subscribeRes = await fetch(`https://graph.facebook.com/v17.0/${pageId}/subscribed_apps?access_token=${encodeURIComponent(pageToken)}`, {
++              method: 'POST',
++            });
++            const subscribeJson = await subscribeRes.json();
++            if (!subscribeRes.ok) console.warn('Failed to subscribe page', subscribeJson);
++          } else if (!enabled && pageToken) {
++            // Unsubscribe app from the page
++            const unsubscribeRes = await fetch(`https://graph.facebook.com/v17.0/${pageId}/subscribed_apps?access_token=${encodeURIComponent(pageToken)}`, {
++              method: 'DELETE',
++            });
++            const unsubscribeJson = await unsubscribeRes.json();
++            if (!unsubscribeRes.ok) console.warn('Failed to unsubscribe page', unsubscribeJson);
++          }
++        } catch (err) {
++          console.error('Webhook subscription error', err);
++        }
++
++        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++      }
++    }
++
++    return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
++
++  } catch (error) {
++    console.error('facebook-connect error', error);
++    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
++  }
++});
+diff --git a/supabase/functions/social-webhook/index.ts b/supabase/functions/social-webhook/index.ts
+index e502626..e3557e0 100644
+--- a/supabase/functions/social-webhook/index.ts
++++ b/supabase/functions/social-webhook/index.ts
+@@ -231,10 +231,24 @@
+ 
+ // Find organization and credentials for the platform
+ async function findPlatformConfig(platform: string, pageId: string) {
+-  console.log(`Finding config for platform: ${platform}, pageId: ${pageId}`);
+-  
+-  // Map messenger to facebook in database
++  console.log(`Finding config for platform: ${platform}, pageId: ${pageId}`);
+   const dbPlatform = platform === 'messenger' ? 'facebook' : platform;
++
++  // Determine the correct JSON key for the page/account ID based on the platform.
++  const credentialKey =
++    platform === 'messenger' ? 'page_id' :
++    platform === 'whatsapp' ? 'phone_number_id' :
++    platform === 'instagram' ? 'instagram_account_id' :
++    null;
++
++  if (!credentialKey) {
++    console.error(`Unsupported platform for direct config lookup: ${platform}`);
++    return null;
++  }
++
++  // Directly query for the platform record using the pageId from the webhook.
+   const { data: platforms, error } = await supabase
+     .from('social_platforms')
+     .select('*, organizations(id, ai_agent_type)')
+@@ -242,50 +256,12 @@
+     .eq('is_enabled', true);
+   
+   if (error) {
+-    console.error('Error fetching platform config:', error);
+-    return null;
+-  }
+-  
+-  console.log(`Found ${platforms?.length || 0} enabled platforms for ${dbPlatform}`);
+-  
+-  if (!platforms || platforms.length === 0) {
+-    console.error(`No enabled platforms found for ${dbPlatform}`);
+-    return null;
+-  }
+-  
+-  // Find matching platform by page ID in credentials
+-  for (const p of platforms) {
+-    const credentials = p.credentials as any;
+-    console.log(`Checking platform ${p.id}, credentials page_id: ${credentials?.page_id}, looking for: ${pageId}`);
+-    
+-    if (credentials?.page_id === pageId || 
+-        credentials?.phone_number_id === pageId ||
+-        credentials?.instagram_account_id === pageId) {
+-      console.log(`Found exact match for platform ${p.id}`);
+-      return {
+-        platform: p,
+-        organization: p.organizations,
+-        accessToken: credentials?.access_token
+-      };
+-    }
+-  }
+-  
+-  // If no exact match, return first enabled platform of this type (fallback for testing)
+-  console.log(`No exact page_id match, using fallback to first enabled platform`);
+-  const p = platforms[0];
+-  const credentials = p.credentials as any;
+-  return {
+-    platform: p,
+-    organization: p.organizations,
+-    accessToken: credentials?.access_token
+-  };
+-}
+-
+-// Fetch user profile name from Facebook Graph API
+-async function fetchUserProfileName(senderId: string, accessToken: string, platform: string): Promise<string | null> {
+-  if (platform !== 'messenger' && platform !== 'instagram') {
+-    return null;
++    if (error.code !== 'PGRST116') { // PGRST116: "Not a single row" which is a valid not-found case
++      console.error(`Error fetching platform config for pageId ${pageId}:`, error);
++    } else {
++      console.log(`No platform config found for pageId ${pageId}`);
++    }
++    return null;
+   }
+   
+   try {
+@@ -310,58 +286,41 @@
+ }
+ 
+ // Get or create lead for the sender
+-async function getOrCreateLead(senderId: string, platform: string, organizationId: string, accessToken?: string) {
+-  // Normalize source name for display (e.g., messenger -> Facebook)
++async function getOrCreateLead(senderId: string, platform: string, organizationId: string, accessToken?: string) {
+   const sourceDisplayName = platform === 'messenger' ? 'Facebook' : 
+                             platform === 'whatsapp' ? 'WhatsApp' : 
+                             platform === 'instagram' ? 'Instagram' : platform;
+-  const sourceIdentifier = `${sourceDisplayName}`;
+-  const lookupSource = `${platform}:${senderId}`;
+-  
+-  console.log(`Looking for lead with lookup source: ${lookupSource}`);
+-  
+-  // Check if lead exists using original format for backwards compatibility
+-  let existingLead = null;
+-  
+-  // Try finding with the old format first (messenger:senderId)
+-  const { data: oldFormatLead, error: findError1 } = await supabase
++
++  // First, try to find an existing lead with a single query
++  const { data: existingLead, error: findError } = await supabase
+     .from('leads')
+     .select('*')
+     .eq('organization_id', organizationId)
+-    .eq('source', lookupSource)
++    .eq('phone', senderId) // `phone` stores the platform-specific sender ID
++    .eq('source', sourceDisplayName)
+     .maybeSingle();
+   
+-  if (oldFormatLead) {
+-    existingLead = oldFormatLead;
+-  } else {
+-    // Also check for new format (Facebook, WhatsApp, Instagram with external_id)
+-    const { data: newFormatLead, error: findError2 } = await supabase
+-      .from('leads')
+-      .select('*')
+-      .eq('organization_id', organizationId)
+-      .eq('source', sourceDisplayName)
+-      .eq('phone', senderId) // Using phone field to store senderId for lookup
+-      .maybeSingle();
+-    
+-    if (newFormatLead) {
+-      existingLead = newFormatLead;
+-    }
+-  }
+-  
++  if (findError) {
++    console.error('Error finding lead:', findError);
++    // Continue to create a new one if not found, but log other errors
++  }
++
+   if (existingLead) {
+     console.log(`Found existing lead: ${existingLead.id}`);
+-    
+-    // Update lead name if it's still using the old generic format and we can fetch the real name
+-    if (existingLead.name.includes('User ') && accessToken) {
+-      const realName = await fetchUserProfileName(senderId, accessToken, platform);
+-      if (realName) {
+-        await supabase
+-          .from('leads')
+-          .update({ name: realName, source: sourceDisplayName })
+-          .eq('id', existingLead.id);
+-        existingLead.name = realName;
+-        existingLead.source = sourceDisplayName;
+-        console.log(`Updated lead name to: ${realName}`);
+-      }
+-    }
+-    
+     return existingLead;
+   }
+-  
+-  if (findError1 && findError1.code !== 'PGRST116') {
+-    console.error('Error finding lead:', findError1);
+-  }
+-  
+-  // Try to fetch real name from platform
++
++  // If no lead is found, create a new one
+   let leadName = `${sourceDisplayName} User`;
+   if (accessToken) {
+     const realName = await fetchUserProfileName(senderId, accessToken, platform);
+@@ -370,25 +329,24 @@
+     }
+   }
+   
+-  // Create new lead with clean source name
+   console.log(`Creating new lead for ${sourceDisplayName}: ${leadName}`);
+-  const { data: newLead, error } = await supabase
++  const { data: newLead, error: createError } = await supabase
+     .from('leads')
+     .insert({
+       name: leadName,
+       organization_id: organizationId,
+       source: sourceDisplayName,
+-      phone: senderId, // Store senderId in phone for future lookup
++      phone: senderId, // Store senderId in phone for consistent lookup
+       status: 'new',
+       is_ai_managed: true
+     })
+     .select()
+     .single();
+   
+-  if (error) {
+-    console.error('Error creating lead:', error);
+-    return null;
+-  }
+-  
++  if (createError) {
++    console.error('Error creating lead:', createError);
++    return null;
++  }
++
+   console.log(`Created new lead: ${newLead.id} with name: ${leadName}`);
+   return newLead;
+ }
+@@ -470,27 +428,49 @@
+   conversationHistory: any[],
+   knowledgeBase: string
+ ) {
+-  console.log(`Generating AI response for agent type: ${agentType}`);
+-  
+-  const agentPrompts: Record<string, string> = {
+-    jay: `You are Jay, a professional AI sales assistant. You help qualify leads, answer questions about products/services, and guide potential customers. Be friendly, helpful, and professional. If the customer seems ready to buy or needs human assistance, let them know you can connect them with a team member.`,
+-    may: `You are May, a friendly AI assistant for a food business. You help customers with menu questions, take food orders, provide recommendations, and schedule order pickups. Be warm and helpful, and know the menu well. When customers want to order, confirm their items and arrange pickup times.`,
+-    cece: `You are Cece, a helpful AI concierge for a hotel or accommodation. You help guests with room inquiries, bookings, amenities information, and general questions about the property. Be welcoming and knowledgeable about the rooms and services available.`
+-  };
+-  
+-  const systemPrompt = `${agentPrompts[agentType] || agentPrompts.jay}
+-
+-${sharedInstructions}
+-
+-${knowledgeBase ? `KNOWLEDGE BASE - Use this information to inform your responses:\n${knowledgeBase}` : ''}
+-
+-Keep responses concise and conversational - suitable for messaging apps. Don't use markdown formatting. Respond naturally as if chatting.`;
++  console.log(`Generating AI response for agent type: ${agentType}`);
++
++  if (!LOVABLE_API_KEY) {
++    console.error("CRITICAL: LOVABLE_API_KEY is not set in environment variables.");
++    // Return a user-facing error but throw in logs for debugging.
++    return "I'm sorry, the AI service is not configured correctly. Please contact support.";
++  }
++
++  const agentPrompts: Record<string, string> = {
++    jay: `You are Jay, a professional AI sales assistant. You help qualify leads, answer questions about products/services, and guide potential customers. Be friendly, helpful, and professional. If the customer seems ready to buy or needs human assistance, let them know you can connect them with a team member.`,
++    may: `You are May, a friendly AI assistant for a food business. You help customers with menu questions, take food orders, provide recommendations, and schedule order pickups. Be warm and helpful, and know the menu well. When customers want to order, confirm their items and arrange pickup times.`,
++    cece: `You are Cece, a helpful AI concierge for a hotel or accommodation. You help guests with room inquiries, bookings, amenities information, and general questions about the property. Be welcoming and knowledgeable about the rooms and services available.`
++  };
++  
++  const systemPrompt = `${agentPrompts[agentType] || agentPrompts.jay}\n\n${sharedInstructions}\n\n${knowledgeBase ? `KNOWLEDGE BASE - Use this information to inform your responses:\n${knowledgeBase}` : ''}\n\nKeep responses concise and conversational - suitable for messaging apps. Don't use markdown formatting. Respond naturally as if chatting.`;
+ 
+   const messages = [
+     { role: 'system', content: systemPrompt },
+     ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+     { role: 'user', content: messageText }
+   ];
+ 
+   console.log(`Calling Lovable AI with ${messages.length} messages (${conversationHistory.length} history)`);
+ 
+-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+-    method: 'POST',
+-    headers: {
+-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+-      'Content-Type': 'application/json',
+-    },
+-    body: JSON.stringify({
+-      model: 'google/gemini-2.5-flash',
+-      messages,
+-      max_tokens: 500
+-    }),
+-  });
+-
+-  if (!response.ok) {
+-    const errorText = await response.text();
+-    console.error('AI API error:', response.status, errorText);
+-    throw new Error(`AI API error: ${response.status} - ${errorText}`);
+-  }
+-
+-  const data = await response.json();
+-  const aiResponse = data.choices[0]?.message?.content || "I'm sorry, I couldn't process that. Please try again.";
+-  console.log('AI response generated:', aiResponse.slice(0, 100));
+-  return aiResponse;
++  try {
++    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
++      method: 'POST',
++      headers: {
++        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
++        'Content-Type': 'application/json',
++      },
++      body: JSON.stringify({
++        model: 'google/gemini-2.5-flash',
++        messages,
++        max_tokens: 500,
++        temperature: 0.7,
++      }),
++      // Add a timeout to prevent the function from hanging
++      signal: AbortSignal.timeout(15000) // 15-second timeout
++    });
++
++    if (!response.ok) {
++      const errorText = await response.text();
++      console.error(`Lovable AI API error: ${response.status} ${response.statusText}`, errorText);
++      throw new Error(`The AI service returned an error (${response.status})`);
++    }
++
++    const data = await response.json();
++    const aiResponse = data.choices?.[0]?.message?.content;
++
++    if (!aiResponse) {
++        console.error("AI response was successful, but content is missing.", data);
++        throw new Error("AI returned an empty response.");
++    }
++
++    console.log('AI response generated:', aiResponse.slice(0, 100));
++    return aiResponse;
++
++  } catch (error) {
++    console.error("Failed to generate AI response:", error);
++    // Return a user-friendly error message, but the error is logged for debugging.
++    return "I'm sorry, I'm having trouble connecting to my AI services right now. Please try again in a moment.";
++  }
+ }
+ 
+ // Send response back to platform
+@@ -743,76 +739,71 @@
+ }
+ 
+ serve(async (req) => {
+-  // Handle OPTIONS requests for CORS preflight
++  // --- Step 1: Handle preflight and verification requests immediately ---
++
+   if (req.method === 'OPTIONS') {
+     return new Response(null, { headers: corsHeaders });
+   }
+ 
+-  // Handle Facebook Webhook Verification
+   if (req.method === 'GET') {
+     try {
+       const url = new URL(req.url);
+       const mode = url.searchParams.get('hub.mode');
+       const token = url.searchParams.get('hub.verify_token');
+       const challenge = url.searchParams.get('hub.challenge');
+ 
+       if (mode === 'subscribe' && token === META_VERIFY_TOKEN) {
+         console.log('Webhook verification successful');
+         return new Response(challenge, { status: 200 });
+       } else {
+         console.warn('Webhook verification failed: Invalid mode or token');
+         return new Response('Forbidden', { status: 403 });
+       }
+     } catch (e) {
+       console.error('Error during webhook verification:', e);
+       return new Response('Internal Server Error', { status: 500 });
+     }
+   }
+ 
+-  // Handle POST requests from webhooks
+-  if (req.method === 'POST') {
+-    const rawBody = await req.text();
+-    const signature = req.headers.get('x-hub-signature-256');
+-
+-    if (!verifyMetaSignature(rawBody, signature)) {
+-      return new Response(JSON.stringify({ error: 'Signature verification failed' }), {
+-        status: 403,
+-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+-      });
+-    }
+-
+-    const body = JSON.parse(rawBody);
+-    
+-    // Process the webhook payload
++  // --- Step 2: Validate the incoming POST request ---
++
++  if (req.method !== 'POST') {
++    return new Response('Method Not Allowed', { status: 405 });
++  }
++
++  const rawBody = await req.text();
++  const signature = req.headers.get('x-hub-signature-256');
++
++  if (!verifyMetaSignature(rawBody, signature)) {
++    // For security, we respond with 200 OK even on failure to avoid leaking info,
++    // but we log it and do not process it.
++    console.error('CRITICAL: Signature verification failed. Request will be ignored.');
++    return new Response('OK', { status: 200 });
++  }
++
++  // --- Step 3: Start background processing and respond immediately ---
++
++  const backgroundTask = async () => {
+     try {
+-      await processWebhook(body);
+-      return new Response(JSON.stringify({ status: 'ok' }), {
+-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+-      });
+-    } catch (error) {
+-      console.error('Error processing webhook:', error.message);
+-      return new Response(JSON.stringify({ error: 'Failed to process webhook' }), {
+-        status: 500,
+-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+-      });
+-    }
+-  }
+-
+-  return new Response('Method Not Allowed', { status: 405 });
++      await processWebhook(JSON.parse(rawBody));
++    } catch (err) {
++      console.error("Error in background webhook processing:", err);
++    }
++  };
++
++  // Use EdgeRuntime.waitUntil to ensure the background task completes even after
++  // the response is sent. Fallback to a simple async call if not in a Vercel/Cloudflare env.
++  (globalThis as any).EdgeRuntime?.waitUntil?.(backgroundTask()) ?? backgroundTask();
++
++  // Return a 200 OK response to the webhook provider *immediately*.
++  return new Response('OK', { status: 200 });
+ });
+ 
+ async function processWebhook(body: any) {
+   const platform = detectPlatform(body);
+   if (!platform) {
+-    console.log('Unknown platform or unsupported message type, returning OK');
+-    return new Response('OK', { status: 200 });
+-  }
+-
++    console.log('Unknown platform or unsupported message type.');
++    return;
++  }
+   const messageData = extractMessageData(body, platform);
+-  if (!messageData) {
+-    console.log('Could not extract message data (might be echo or status update)');
+-    return new Response('OK', { status: 200 });
+-  }
+-  
+-  if (!messageData.messageText) {
+-    console.log('No message text found (might be attachment or reaction)');
+-    return new Response('OK', { status: 200 });
++  if (!messageData || !messageData.messageText) {
++    console.log('Could not extract message or message is empty.');
++    return;
+   }
+ 
+   // Generate a unique message ID for deduplication
+@@ -820,38 +811,29 @@
+   
+   // Check for duplicate messages (prevents replay attacks and webhook retries)
+   if (isDuplicateMessage(messageId)) {
+-    console.log('Duplicate message, skipping processing');
+-    return new Response('OK', { status: 200 });
++    return;
+   }
+ 
+   // Rate limiting check
+   if (!checkRateLimit(messageData.senderId)) {
+-    console.warn(`Rate limit exceeded for ${messageData.senderId}, message dropped`);
+-    return new Response('OK', { status: 200 });
+-  }
+-
+-  // Validate payload size (prevent abuse with large payloads)
+-  const bodyStr = JSON.stringify(body);
+-  if (bodyStr.length > 50000) {
+-    console.warn('Request payload too large, rejecting');
+-    return new Response('OK', { status: 200 });
++    return;
+   }
+ 
+   console.log(`Processing ${platform} message from ${messageData.senderId}: "${messageData.messageText}"`);
+ 
+   // Find platform configuration
+   const config = await findPlatformConfig(platform, messageData.pageId);
+-  if (!config) {
+-    console.error('No platform configuration found');
+-    return new Response('OK', { status: 200 });
+-  }
+-  
+-  if (!config.accessToken) {
+-    console.error('Platform configured but missing access token');
+-    return new Response('OK', { status: 200 });
+-  }
+-
+-  const organizationId = config.organization.id;
++  if (!config || !config.accessToken) {
++    console.error(`No enabled configuration with access token found for page ${messageData.pageId}`);
++    return;
++  }
++
++  const { organization, accessToken } = config;
+   const agentType = config.organization.ai_agent_type || 'jay';
+   
+   console.log(`Using organization ${organizationId} with agent type ${agentType}`);
+ 
+   // Get or create lead (pass access token to fetch real name from Facebook/Instagram)
+-  const lead = await getOrCreateLead(messageData.senderId, platform, organizationId, config.accessToken);
++  const lead = await getOrCreateLead(messageData.senderId, platform, organization.id, accessToken);
+   if (!lead) {
+     console.error('Failed to get/create lead');
+     return new Response('OK', { status: 200 });
+@@ -872,70 +854,63 @@
+       content: messageData.messageText
+     });
+     return new Response('OK', { status: 200 });
+-  }
+-
+-  // Save the incoming user message immediately
++  }
++  
++  // --- Simplified Debounce and Processing Logic ---
++
++  // 1. Save the incoming message immediately.
+   await supabase.from('ai_messages').insert({
+     conversation_id: conversation.id,
+     role: 'user',
+     content: messageData.messageText,
+     external_id: messageData.messageId
+   });
+-  console.log('User message saved to database');
+-  
+-  // Use EdgeRuntime.waitUntil for background processing with debounce
+-  // This returns immediately to Facebook but continues processing in background
+-  const backgroundTask = async () => {
+-    try {
+-      // Wait for debounce period to collect multiple messages
+-      console.log(`Waiting ${DEBOUNCE_WINDOW_MS}ms for debounce...`);
+-      await new Promise(resolve => setTimeout(resolve, DEBOUNCE_WINDOW_MS));
+-      
+-      // Get all recent user messages from the last few seconds (debounce window + buffer)
+-      const recentCutoff = new Date(Date.now() - DEBOUNCE_WINDOW_MS - 1000).toISOString();
+-      const { data: recentMessages } = await supabase
+-        .from('ai_messages')
+-        .select('id, content, created_at')
+-        .eq('conversation_id', conversation.id)
+-        .eq('role', 'user')
+-        .gte('created_at', recentCutoff)
+-        .order('created_at', { ascending: true });
+-      
+-      if (!recentMessages || recentMessages.length === 0) {
+-        console.log('No recent messages found (may have been processed by another instance)');
+-        return;
+-      }
+-      
+-      // Check if we already responded to these messages
+-      const { data: recentAIMessages } = await supabase
+-        .from('ai_messages')
+-        .select('created_at')
+-        .eq('conversation_id', conversation.id)
+-        .eq('role', 'assistant')
+-        .gte('created_at', recentCutoff)
+-        .limit(1);
+-      
+-      if (recentAIMessages && recentAIMessages.length > 0) {
+-        console.log('AI already responded to recent messages, skipping');
+-        return;
+-      }
+-      
+-      // Combine all recent messages into one context
+-      const combinedMessage = recentMessages.map(m => m.content).join('\n');
+-      console.log(`Processing ${recentMessages.length} buffered messages: "${combinedMessage.slice(0, 100)}..."`);
+-      
+-      // Get conversation history (excluding the recent messages we just combined)
+-      const conversationHistory = await getConversationHistory(conversation.id);
+-      
+-      // Get knowledge base
+-      const knowledgeBase = await getKnowledgeBase(organizationId);
+-      
+-      // Generate AI response for all combined messages
+-      const aiResponse = await generateAIResponse(
+-        agentType,
+-        combinedMessage,
+-        conversationHistory.slice(0, -recentMessages.length), // Exclude the recent messages we just combined
+-        knowledgeBase
+-      );
+-      
+-      // Save AI response to database
++
++  // 2. Wait for the debounce period to collect any follow-up messages.
++  await new Promise(resolve => setTimeout(resolve, DEBOUNCE_WINDOW_MS));
++
++  // 3. After waiting, check if an AI has already responded in the last few seconds.
++  // This prevents multiple parallel invocations from sending duplicate replies.
++  const recentResponseCutoff = new Date(Date.now() - DEBOUNCE_WINDOW_MS * 2).toISOString();
++  const { data: recentAIResponse, error: checkError } = await supabase
++    .from('ai_messages')
++    .select('id')
++    .eq('conversation_id', conversation.id)
++    .eq('role', 'assistant')
++    .gte('created_at', recentResponseCutoff)
++    .limit(1);
++
++  if (checkError) {
++    console.error("Error checking for recent AI responses:", checkError);
++    return; // Don't proceed if check fails
++  }
++  
++  if (recentAIResponse && recentAIResponse.length > 0) {
++    console.log("An AI response was recently sent. Halting this instance to prevent duplicate replies.");
++    return;
++  }
++
++  // 4. Get all user messages that haven't been responded to yet.
++  const lastAIResponse = await supabase
++    .from('ai_messages')
++    .select('created_at')
++    .eq('conversation_id', conversation.id)
++    .eq('role', 'assistant')
++    .order('created_at', { ascending: false })
++    .limit(1)
++    .single();
++
++  const query = supabase
++    .from('ai_messages')
++    .select('content')
++    .eq('conversation_id', conversation.id)
++    .eq('role', 'user');
++
++  if (lastAIResponse.data) {
++    query.gt('created_at', lastAIResponse.data.created_at);
++  }
++  
++  const { data: newMessages, error: messagesError } = await query.order('created_at', { ascending: true });
++
++  if (messagesError || !newMessages || newMessages.length === 0) {
++    console.log("No new user messages to process since last AI response.");
++    return;
++  }
++  
++  const combinedMessage = newMessages.map(m => m.content).join('\n');
++
++  // 5. Proceed with generating and sending the AI response.
++  const history = await getConversationHistory(conversation.id);
++  const knowledgeBase = await getKnowledgeBase(organization.id);
++
++  const aiResponse = await generateAIResponse(agentType, combinedMessage, history, knowledgeBase);
++  
++  const sent = await sendPlatformResponse(platform, messageData.senderId, aiResponse, accessToken, messageData.pageId);
++  
++  if (sent) {
+       await supabase.from('ai_messages').insert({
+         conversation_id: conversation.id,
+         role: 'assistant',
+         content: aiResponse
+       });
+-      console.log('AI response saved to database');
+-      
+-      // Send response back to platform
+-      const sent = await sendPlatformResponse(
+-        platform,
+-        messageData.senderId,
+-        aiResponse,
+-        config.accessToken,
+-        messageData.pageId
+-      );
+-      
+-      if (sent) {
+-        console.log('Debounced message processed and response sent successfully');
+-      } else {
+-        console.error('Failed to send platform response');
+-      }
+-    } catch (bgError) {
+-      console.error('Error in background debounce task:', bgError);
+-    }
+-  };
+-  
+-  // Start background task - function continues running after returning response
+-  (globalThis as any).EdgeRuntime?.waitUntil?.(backgroundTask()) ?? backgroundTask();
+-  console.log('Background debounce task started, returning 200 to platform');
+-
+-  return new Response('OK', { status: 200 });
+-});
++    await supabase.from('leads').update({ last_ai_response_at: new Date().toISOString() }).eq('id', lead.id);
++    console.log("Successfully processed message(s) and sent AI reply.");
++  }
++}
+diff --git a/src/App.tsx b/src/App.tsx
+index 45b85a1..681e18b 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -40,6 +40,7 @@
+ import { SessionManagement } from "./pages/SessionManagement";
+ import { ThemeProvider } from './contexts/ThemeContext';
+ import Reporting from './pages/Reporting';
++import FacebookCallback from './pages/FacebookCallback';
+ 
+ const queryClient = new QueryClient({
+   defaultOptions: {
+@@ -70,6 +71,7 @@
+               <BrowserRouter>
+                 <ScrollToTop />
+                 <Routes>
++                  <Route path="/facebook-callback" element={<FacebookCallback />} />
+                   <Route path="/" element={<Index />} />
+                   <Route path="/ai-agents" element={<AIAgents />} />
+                   <Route path="/custom-solutions" element={<CustomSolutions />} />
+diff --git a/src/pages/FacebookCallback.tsx b/src/pages/FacebookCallback.tsx
+new file mode 100644
+index 0000000..819d28d
+--- /dev/null
++++ b/src/pages/FacebookCallback.tsx
+@@ -0,0 +1,44 @@
++import { useEffect } from 'react';
++import { useNavigate, useSearchParams } from 'react-router-dom';
++import { supabase } from '@/integrations/supabase/client';
++import { useToast } from '@/hooks/use-toast';
++
++export default function FacebookCallback() {
++  const [searchParams] = useSearchParams();
++  const navigate = useNavigate();
++  const { toast } = useToast();
++
++  useEffect(() => {
++    (async () => {
++      const code = searchParams.get('code');
++      const state = searchParams.get('state');
++      const redirectUri = `${window.location.origin}/facebook-callback`;
++
++      if (!code) {
++        toast({ title: 'Facebook connect failed', description: 'Missing code in callback', variant: 'destructive' });
++        navigate('/social-platforms');
++        return;
++      }
++
++      try {
++        const sessionRes = await supabase.auth.getSession();
++        const accessToken = sessionRes.data.session?.access_token;
++
++        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-connect`, {
++          method: 'POST',
++          headers: {
++            'Content-Type': 'application/json',
++            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
++          },
++          body: JSON.stringify({ action: 'exchange', code, redirectUri, state }),
++        });
++
++        const json = await res.json();
++        if (!res.ok) {
++          console.error('facebook exchange error', json);
++          toast({ title: 'Facebook connect failed', description: json?.error || 'Unknown error', variant: 'destructive' });
++        } else {
++          toast({ title: 'Facebook connected', description: 'Pages have been imported' });
++        }
++      } catch (err) {
++        console.error(err);
++        toast({ title: 'Facebook connect failed', description: 'Network error', variant: 'destructive' });
++      } finally {
++        navigate('/social-platforms');
++      }
++    })();
++  }, []); // eslint-disable-line react-hooks/exhaustive-deps
++
++  return (
++    <div className="p-6">
++      <h2 className="text-lg font-semibold">Connecting to Facebook...</h2>
++      <p className="text-sm text-muted-foreground mt-2">Please wait while we finalize the connection and import pages.</p>
++    </div>
++  );
++}
+diff --git a/src/pages/SocialPlatforms.tsx b/src/pages/SocialPlatforms.tsx
+index 1ae3e2a..835a633 100644
+--- a/src/pages/SocialPlatforms.tsx
++++ b/src/pages/SocialPlatforms.tsx
+@@ -14,6 +14,7 @@
+ import { useToast } from '@/hooks/use-toast';
+ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+ import { useNavigate } from 'react-router-dom';
++import {any} from "zod";
+ 
+ const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/social-webhook`;
+ interface SocialPlatform {
+@@ -71,20 +72,111 @@
+   const [showConfigDialog, setShowConfigDialog] = useState(false);
+   const [selectedPlatform, setSelectedPlatform] = useState<SocialPlatform | null>(null);
+   const [newPlatformType, setNewPlatformType] = useState<string>('');
+-  const [formData, setFormData] = useState<Record<string, string>>({});
++	const [formData, setFormData] = useState < Record < string, string >> ({});
++	const [fbPages, setFbPages] = useState < Array < any >> ([]);
++	const [fbLoading, setFbLoading] = useState(false);
++	const navigate = useNavigate();
+ 
+   const canManage = effectiveIsSuperAdmin || effectiveIsClientAdmin;
+ 
+   useEffect(() => {
+     fetchPlatforms();
++		if (profile?.organization_id) fetchFacebookPages();
+   }, []);
+ 
++	const fetchFacebookPages = async () => {
++		if (!profile?.organization_id) return;
++		setFbLoading(true);
++		try {
++			// Use the safe view to query pages directly
++			const { data, error } = await supabase
++				.from('facebook_pages_safe')
++				.select('*')
++				.eq('organization_id', profile.organization_id);
++
++			if (error) {
++				console.error('Failed to fetch fb pages', error);
++				toast({ title: 'Error', description: 'Failed to fetch Facebook pages', variant: 'destructive' });
++			} else {
++				setFbPages(data || []);
++			}
++		} catch (err) {
++			console.error('fetchFacebookPages error', err);
++		} finally {
++			setFbLoading(false);
++		}
++	};
++
++	const handleConnectFacebook = async () => {
++		// Build the Facebook OAuth URL and redirect
++		const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID;
++		const redirectUri = `${window.location.origin}/facebook-callback`;
++		const state = Math.random().toString(36).slice(2);
++		try {
++			localStorage.setItem('fb_oauth_state', state);
++			const scope = encodeURIComponent('pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging');
++			const oauthUrl = `https://www.facebook.com/v17.0/dialog/oauth?client_id=${FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${state}`;
++			window.location.href = oauthUrl;
++		} catch (err) {
++			console.error(err);
++			toast({ title: 'Error', description: 'Failed to initiate Facebook OAuth', variant: 'destructive' });
++		}
++	};
++
++	// Facebook JS SDK integration
++	useEffect(() => {
++		// Load the Facebook SDK if not present
++		if ((window as any).FB) return;
++
++		const fbAppId = import.meta.env.VITE_FACEBOOK_APP_ID;
++		const apiVersion = import.meta.env.VITE_FACEBOOK_API_VERSION || 'v17.0';
++
++		(window as any).fbAsyncInit = function() {
++			(window as any).FB.init({
++				appId: fbAppId,
++				cookie: true,
++				xfbml: true,
++				version: apiVersion,
++			});
++			(window as any).FB.AppEvents && (window as any).FB.AppEvents.logPageView();
++		};
++
++		const id = 'facebook-jssdk';
++		if (document.getElementById(id)) return;
++		const js = document.createElement('script');
++		js.id = id;
++		js.src = 'https://connect.facebook.net/en_US/sdk.js';
++		document.head.appendChild(js);
++	}, []);
++
++	const handleConnectWithSDK = async () => {
++		if (!(window as any).FB) {
++			toast({ title: 'Facebook SDK not loaded', description: 'Please try again in a moment', variant: 'destructive' });
++			return;
++		}
++
++		(window as any).FB.login(async (response: any) => {
++			if (!response || !response.authResponse) {
++				toast({ title: 'Facebook login failed', description: 'No auth response', variant: 'destructive' });
++				return;
++			}
++
++			const userAccessToken = response.authResponse.accessToken;
++			try {
++				const sessionRes = await supabase.auth.getSession();
++				const accessToken = sessionRes.data.session?.access_token;
++
++				const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-connect`, {
++					method: 'POST',
++					headers: {
++						'Content-Type': 'application/json',
++						...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
++					},
++					body: JSON.stringify({ action: 'exchange_with_token', userAccessToken }),
++				});
++
++				const json = await res.json();
++				if (!res.ok) {
++					console.error('facebook exchange error', json);
++					toast({ title: 'Facebook connect failed', description: json?.error || 'Unknown error', variant: 'destructive' });
++				} else {
++					toast({ title: 'Facebook connected', description: 'Pages have been imported' });
++					fetchFacebookPages();
++					fetchPlatforms();
++				}
++			} catch (err) {
++				console.error(err);
++				toast({ title: 'Facebook connect failed', description: 'Network error', variant: 'destructive' });
++			}
++		}, { scope: 'pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging', return_scopes: true });
++	};
++
++	const handleDisconnectPage = async (pageId: string) => {
++		if (!confirm('Disconnect this Facebook page?')) return;
++		try {
++			const sessionRes = await supabase.auth.getSession();
++			const accessToken = sessionRes.data.session?.access_token;
++			const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-connect`, {
++				method: 'POST',
++				headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
++				body: JSON.stringify({ action: 'disconnect', page_id: pageId }),
++			});
++			if (!res.ok) throw new Error('Failed to disconnect');
++			toast({ title: 'Disconnected', description: 'Facebook page disconnected' });
++			fetchFacebookPages();
++			fetchPlatforms();
++		} catch (err) {
++			console.error(err);
++			toast({ title: 'Error', description: 'Failed to disconnect page', variant: 'destructive' });
++		}
++	};
++
+   const fetchPlatforms = async () => {
+     setIsLoading(true);
+     try {
+@@ -328,6 +420,68 @@
+         </AlertDescription>
+       </Alert>
+ 
++			{/* Facebook Connect */}
++			<div className="space-y-3">
++				<div className="flex items-center justify-between">
++					<div>
++						<h2 className="text-lg font-semibold">Facebook Pages</h2>
++						<p className="text-sm text-muted-foreground">Connect your Facebook pages and choose which ones to integrate with the app.</p>
++					</div>
++					{canManage && (
++						<div className="flex items-center gap-2">
++							<Button onClick={handleConnectFacebook}>
++								<Facebook className="h-4 w-4 mr-2" />
++								Connect Facebook
++							</Button>
++						</div>
++					)}
++				</div>
++
++				{fbLoading ? (
++					<div className="py-4">
++						<RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
++					</div>
++				) : fbPages.length === 0 ? (
++					<Card>
++						<CardContent className="py-6">
++							<p className="text-sm text-muted-foreground">No Facebook pages connected for this organization.</p>
++						</CardContent>
++					</Card>
++				) : (
++					<div className="grid gap-3 md:grid-cols-2">
++						{fbPages.map((p: any) => (
++							<Card key={p.id}>
++								<CardHeader>
++									<div className="flex items-center justify-between">
++										<div>
++											<CardTitle className="text-sm">{p.page_name || p.page_id}</CardTitle>
++											<CardDescription className="text-xs">Page ID: {p.page_id}</CardDescription>
++										</div>
++										<div className="flex items-center gap-2">
++											<Switch checked={!!p.is_enabled} onCheckedChange={async (val) => {
++												// Toggle integration for this page
++												try {
++													const sessionRes = await supabase.auth.getSession();
++													const accessToken = sessionRes.data.session?.access_token;
++													const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-connect`, {
++														method: 'POST',
++														headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
++														body: JSON.stringify({ action: 'set_enabled', page_id: p.page_id, enabled: val }),
++													});
++													if (!res.ok) throw new Error('Failed to update');
++													toast({ title: val ? 'Enabled' : 'Disabled', description: `Integration ${val ? 'enabled' : 'disabled'}` });
++													fetchFacebookPages();
++													fetchPlatforms();
++												} catch (err) {
++													console.error(err);
++													toast({ title: 'Error', description: 'Failed to update integration', variant: 'destructive' });
++												}
++											}} />
++											<Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(p.page_id)}>
++												<Copy className="h-4 w-4" />
++											</Button>
++											<Button variant="destructive" size="sm" onClick={() => handleDisconnectPage(p.page_id)}>
++												<PowerOff className="h-4 w-4" />
++											</Button>
++										</div>
++									</div>
++								</CardHeader>
++							</Card>
++						))}
++					</div>
++				)}
++			</div>
++
+       {/* Header */}
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+         <div>
+
+-- 
+2.43.0

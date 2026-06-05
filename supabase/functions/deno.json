@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-restricted-globals"],
+      "tags": ["recommended"]
+    }
+  },
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "zod": "npm:zod@3.22.4",
+    "std/http/server": "https://deno.land/std@0.190.0/http/server.ts",
+    "std/testing/asserts": "https://deno.land/std@0.190.0/testing/asserts.ts",
+    "resend": "npm:resend@2.0.0",
+    "openai": "npm:openai@4.0.0",
+    "date-fns": "npm:date-fns@3.6.0"
+  }
+}

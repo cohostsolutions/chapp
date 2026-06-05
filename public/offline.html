@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Offline - AlCor Nexus</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --background: #0f172a;
+      --foreground: #f1f5f9;
+      --primary: #0891b2;
+      --primary-dark: #0e7490;
+      --card: #1e293b;
+      --muted: #64748b;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Oxygen', sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background-image: 
+        radial-gradient(ellipse at top, rgba(8, 145, 178, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+    }
+
+    .container {
+      max-width: 28rem;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon-container {
+      margin-bottom: 2rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    .wifi-icon {
+      width: 6rem;
+      height: 6rem;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+      opacity: 0.3;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-dot {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      background: #ef4444;
+      border-radius: 50%;
+      border: 3px solid var(--background);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--foreground);
+    }
+
+    .description {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .card h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .feature-list {
+      list-style: none;
+      text-align: left;
+    }
+
+    .feature-list li {
+      padding: 0.5rem 0;
+      color: var(--muted);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .feature-list li:before {
+      content: "✓";
+      color: var(--primary);
+      font-weight: bold;
+      font-size: 1.125rem;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: rgba(8, 145, 178, 0.1);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .sync-spinner {
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid var(--primary);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: var(--primary);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .connection-indicator {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.5rem 1rem;
+      background: var(--card);
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .indicator-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    .indicator-dot.online {
+      background: #22c55e;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 1rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .wifi-icon {
+        width: 5rem;
+        height: 5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Connection Indicator -->
+  <div class="connection-indicator" id="connectionIndicator">
+    <div class="indicator-dot" id="indicatorDot"></div>
+    <span id="connectionText">Offline</span>
+  </div>
+
+  <div class="container">
+    <div class="icon-container">
+      <svg class="wifi-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 12.55a11 11 0 0114.08 0" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M1.42 9a16 16 0 0121.16 0" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8.53 16.11a6 6 0 016.95 0" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="12" y1="20" x2="12.01" y2="20" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="status-dot"></div>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p class="description">
+      No internet connection detected. Don't worry - you can still access cached content and your changes will sync automatically when you're back online.
+    </p>
+
+    <div class="sync-status" id="syncStatus" style="display: none;">
+      <div class="sync-spinner"></div>
+      <span>Waiting to sync...</span>
+    </div>
+
+    <div class="card">
+      <h2>Available Offline</h2>
+      <ul class="feature-list">
+        <li>View cached dashboard data</li>
+        <li>Access recent leads and contacts</li>
+        <li>Read knowledge base articles</li>
+        <li>Review AI training sessions</li>
+      </ul>
+    </div>
+
+    <button class="button" onclick="checkConnection()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+      </svg>
+      Try Again
+    </button>
+  </div>
+
+  <script>
+    let checkInterval;
+
+    // Check connection status
+    function updateConnectionStatus() {
+      const isOnline = navigator.onLine;
+      const indicator = document.getElementById('indicatorDot');
+      const text = document.getElementById('connectionText');
+      const syncStatus = document.getElementById('syncStatus');
+
+      if (isOnline) {
+        indicator.classList.add('online');
+        text.textContent = 'Back Online';
+        syncStatus.style.display = 'flex';
+        
+        // Reload after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        indicator.classList.remove('online');
+        text.textContent = 'Offline';
+        syncStatus.style.display = 'none';
+      }
+    }
+
+    // Manual connection check
+    function checkConnection() {
+      updateConnectionStatus();
+      
+      if (navigator.onLine) {
+        // Try to fetch to verify actual connectivity
+        fetch('/', { method: 'HEAD', cache: 'no-store' })
+          .then(() => {
+            window.location.reload();
+          })
+          .catch(() => {
+            alert('Still unable to connect. Please check your internet connection.');
+          });
+      } else {
+        alert('No internet connection detected. Please check your network settings.');
+      }
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+
+    // Check status periodically
+    checkInterval = setInterval(updateConnectionStatus, 5000);
+
+    // Initial check
+    updateConnectionStatus();
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      clearInterval(checkInterval);
+    });
+  </script>
+</body>
+</html>

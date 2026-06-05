@@ -1,0 +1,68 @@
+name: Supabase Migration Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'supabase/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'supabase/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Supabase Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Basic structure checks
+        run: |
+          set -euo pipefail
+          echo "Checking migration files..."
+          if [ ! -d supabase/migrations ]; then
+            echo "No migrations directory found; skipping."
+            exit 0
+          fi
+          # Check that migration files exist and are not empty
+          migration_count=$(find supabase/migrations -maxdepth 1 -name "*.sql" -type f | wc -l)
+          if [ "$migration_count" -eq 0 ]; then
+            echo "❌ No SQL migration files found in supabase/migrations/"
+            exit 1
+          fi
+          # Check each migration file is not empty
+          while IFS= read -r file; do
+            if [ ! -s "$file" ]; then
+              echo "❌ Empty migration file: $file"
+              exit 1
+            fi
+          done < <(find supabase/migrations -maxdepth 1 -name "*.sql" -type f)
+          echo "✅ Found $migration_count migration files"
+          echo "✅ All migration files are valid"
+
+      - name: Check unique migration timestamps
+        run: |
+          set -euo pipefail
+          timestamps=$(find supabase/migrations -maxdepth 1 -name "*.sql" -type f -printf "%f\n" | sed 's/_.*\.sql$//' | sort)
+          dups=$(echo "$timestamps" | uniq -d || true)
+          if [ -n "$dups" ]; then
+            echo "❌ Duplicate migration timestamps detected:"; echo "$dups"; exit 1; fi
+          echo "✅ Migration timestamps are unique."
+
+      - name: Comment results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🗄️ Supabase migration validation completed successfully.',
+            });

@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes" />
+    
+    <!-- iOS Safari specific fixes -->
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    
+    <!-- Preconnect to Google Fonts for faster loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Preconnect to Supabase for faster API calls -->
+    <link rel="preconnect" href="https://domipubyjkhsrmdwtabh.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://domipubyjkhsrmdwtabh.supabase.co" />
+    
+    <!-- Preconnect to Supabase Auth -->
+    <link rel="preconnect" href="https://domipubyjkhsrmdwtabh.supabase.co" crossorigin />
+    
+    <!-- DNS Prefetch for third-party services -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2" as="font" type="font/woff2" crossorigin />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0891b2" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0891b2" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AlCor CRM" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="512x512" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/AlCor Favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/AlCor Favicon/favicon-16x16.png">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/AlCor Favicon/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/pwa-512x512.png" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>AlCor Nexus | AI-Powered Multi-Channel Sales &amp; Customer Engagement</title>
+    <meta name="description" content="Transform your business with AlCor Nexus. AI agents for sales (Jay), food ordering (May), and hospitality (Cece). Automate leads from Facebook, WhatsApp & Instagram. Browser-to-phone calling included.">
+    <meta name="keywords" content="CRM software, AI sales bot, lead management, Facebook Messenger CRM, WhatsApp business, Instagram DM automation, hotel booking system, restaurant ordering, multi-tenant CRM, Philippines CRM">
+    <meta name="author" content="AlCor Nexus" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="facebook-domain-verification" content="uhee3nao6jv4zkiif8a946o9c4kgf7" />
+    <meta name="google-site-verification" content="zh9ww1fj7m5qDYKzq9ZXcaW--eKu9r2mMF8tvVqfnEc" />
+    <link rel="canonical" href="https://alcornexus.com/" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="AlCor Nexus LLM guide" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://alcornexus.com" />
+    <meta property="og:title" content="AlCor Nexus | AI-Powered Multi-Channel Sales &amp; Customer Engagement" />
+    <meta property="og:description" content="AlCor Nexus provides AI agents for sales, food ordering, and hospitality teams across Facebook Messenger, WhatsApp, and Instagram." />
+    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/zncPguSKaocnhhhqs2uWpYwkxp73/social-images/social-1766759818634-AlCor Temp Primary Logo.png">
+    <meta property="og:site_name" content="AlCor Nexus" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@AlCorNexus" />
+    <meta name="twitter:title" content="AlCor Nexus | AI-Powered Multi-Channel Sales &amp; Customer Engagement" />
+    <meta name="twitter:description" content="Specialized AI agents for sales teams, restaurants, and hotels across Facebook Messenger, WhatsApp, and Instagram." />
+    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/zncPguSKaocnhhhqs2uWpYwkxp73/social-images/social-1766759818634-AlCor Temp Primary Logo.png">
+
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AlCor Nexus",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI-powered multi-channel CRM platform with specialized agents for sales, food ordering, and hospitality businesses.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free trial available"
+      },
+      "featureList": [
+        "AI-powered lead qualification",
+        "Multi-channel messaging (Facebook, WhatsApp, Instagram)",
+        "Browser-to-phone calling",
+        "Google Calendar integration",
+        "Multi-tenant architecture",
+        "Role-based access control"
+      ]
+    }
+    </script>
+
+    <!-- Structured Data - CrunchBase / Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AlCor Nexus",
+      "operatingSystem": "Web-based",
+      "applicationCategory": "BusinessApplication",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5.0",
+        "ratingCount": "1"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "PHP"
+      },
+      "description": "AI-powered CRM and speed-to-lead automation tool for Philippine businesses.",
+      "author": {
+        "@type": "Organization",
+        "name": "AlCor Digital Nexus OPC",
+        "sameAs": [
+          "https://www.crunchbase.com/organization/alcor-digital-nexus-opc",
+          "https://www.linkedin.com/company/alcor-digital-nexus",
+          "https://www.facebook.com/alcor.nexus"
+        ]
+      }
+    }
+    </script>
+
+    <!-- Critical CSS for faster FCP -->
+    <style>
+      /* Critical above-the-fold styles */
+      :root {
+        --background: 222 47% 6%;
+        --foreground: 210 40% 98%;
+        --primary: 187 85% 43%;
+      }
+      body {
+        margin: 0;
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      .app-shell {
+        min-height: 100vh;
+      }
+      /* Prevent FOUC */
+      .loading-skeleton {
+        background: linear-gradient(90deg, hsl(var(--background)) 25%, hsl(222 47% 10%) 50%, hsl(var(--background)) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VL3XX800GT"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-VL3XX800GT');
+    </script>
+  </head>
+
+  <body>
+    <div id="root" class="app-shell"></div>
+    <noscript>
+      <div style="padding: 1.5rem; max-width: 48rem; margin: 0 auto; color: hsl(210 20% 88%); font-family: system-ui, -apple-system, sans-serif;">
+        JavaScript is required to load the AlCor Nexus website.
+      </div>
+    </noscript>
+    
+    <!-- Facebook SDK -->
+    <script>
+      window.fbAsyncInit = function() {
+        var configuredAppId = '%VITE_FACEBOOK_APP_ID%';
+        console.info('[Meta SDK] fbAsyncInit start', {
+          hasAppId: Boolean(configuredAppId),
+          appIdPreview: configuredAppId ? String(configuredAppId).slice(0, 6) : null,
+          version: 'v17.0',
+        });
+
+        FB.init({
+          appId      : configuredAppId,
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v17.0'
+        });
+
+        console.info('[Meta SDK] FB.init complete', {
+          hasFBObject: Boolean(window.FB),
+          hasLoginMethod: Boolean(window.FB && window.FB.login),
+        });
+          
+        FB.AppEvents.logPageView();   
+      };
+
+      (function(d, s, id){
+         var js, fjs = d.getElementsByTagName(s)[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement(s); js.id = id;
+         js.src = "https://connect.facebook.net/en_US/sdk.js";
+         js.onload = function() {
+           console.info('[Meta SDK] sdk.js loaded');
+         };
+         js.onerror = function() {
+           console.error('[Meta SDK] Failed to load sdk.js');
+         };
+         fjs.parentNode.insertBefore(js, fjs);
+       }(document, 'script', 'facebook-jssdk'));
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ai_conversations TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.bookings TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.calendar_sync_events TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.communications TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.google_calendar_tokens TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.notification_history TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.orders TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organizations TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.profiles TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.reports TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.room_units TO service_role;

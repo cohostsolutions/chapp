@@ -1,0 +1,139 @@
+project_id = "domipubyjkhsrmdwtabh"
+
+[functions.ai-chat]
+verify_jwt = true
+
+[functions.sync-booking-calendar]
+verify_jwt = true
+
+[functions.agent-takeover]
+verify_jwt = true
+
+[functions.agent-handback]
+verify_jwt = true
+
+[functions.google-calendar]
+verify_jwt = true
+
+[functions.send-sms]
+verify_jwt = true
+
+[functions.generate-summary]
+verify_jwt = true
+
+[functions.manage-user]
+verify_jwt = true
+
+[functions.social-webhook]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = true
+
+[functions.change-password]
+verify_jwt = true
+
+[functions.book-demo]
+verify_jwt = false
+
+[functions.login-alert]
+verify_jwt = false
+
+[functions.demo-ai-chat]
+verify_jwt = false
+
+[functions.refresh-facebook-tokens]
+verify_jwt = false
+
+[functions.refresh-single-token]
+verify_jwt = true
+
+[functions.send-email-digest]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
+
+[functions.send-social-message]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-scheduled-reports]
+verify_jwt = false
+
+[functions.geolocate-ip]
+verify_jwt = true
+
+[functions.revoke-session]
+verify_jwt = true
+
+[functions.test-social-connection]
+verify_jwt = true
+
+[functions.facebook-connect]
+verify_jwt = true
+
+[functions.webhook-health-check]
+verify_jwt = true
+
+[functions.manage-2fa]
+verify_jwt = true
+
+[functions.send-followup-email]
+verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = true
+
+[functions.cleanup-old-data]
+verify_jwt = false
+
+[functions.cleanup-training-retention]
+verify_jwt = false
+
+[functions.sync-calendar-events]
+verify_jwt = false
+
+[functions.auto-update-booking-status]
+verify_jwt = false
+
+[functions.process-document]
+verify_jwt = true
+
+[functions.evaluate-training-session]
+verify_jwt = true
+
+[functions.upload-chat-file]
+verify_jwt = true
+
+[functions.sync-bookings-from-events]
+verify_jwt = false
+
+[functions.reengage-lead]
+verify_jwt = true
+
+[functions.generate-recurring-expenses]
+verify_jwt = false
+
+[functions.backfill-facebook-messages]
+verify_jwt = true
+
+[functions.process-pending-messages]
+verify_jwt = true
+
+[functions.migrate-assets]
+verify_jwt = true
+
+[functions.undo-migration]
+verify_jwt = true
+
+[functions.twilio-voice-token]
+verify_jwt = true
+
+[functions.twilio-voice-webhook]
+verify_jwt = false
+
+[functions.send-reaction]
+verify_jwt = true

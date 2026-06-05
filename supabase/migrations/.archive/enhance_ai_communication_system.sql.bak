@@ -1,0 +1,574 @@
+-- Enhanced AI Communication System - Database Migrations
+-- This file contains all SQL migrations needed for the 7 enhancements
+-- Apply these in Supabase: SQL Editor > paste each block > Run
+
+-- ============================================================================
+-- MIGRATION 1: Lead Engagement Profiles
+-- Tracks communication patterns, preferences, topics, objections per lead
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS lead_engagement_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Communication preferences
+  communication_style TEXT DEFAULT 'neutral', -- quick_responses|detailed_info|visual|text
+  response_speed_avg_minutes INTEGER,
+  
+  -- Topic tracking
+  topics_discussed JSONB DEFAULT '[]'::jsonb, -- ["pricing", "availability", "features"]
+  abandoned_topics JSONB DEFAULT '[]'::jsonb, -- topics started but not completed
+  
+  -- Objections and resolutions
+  objections_history JSONB DEFAULT '[]'::jsonb, -- [{topic, objection, resolution}, ...]
+  
+  -- Engagement metrics
+  interaction_count INTEGER DEFAULT 0,
+  last_interaction TIMESTAMP WITH TIME ZONE,
+  
+  -- Metadata
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  CONSTRAINT unique_lead_profile UNIQUE(organization_id, lead_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_engagement_profiles_lead_id 
+  ON lead_engagement_profiles(lead_id);
+CREATE INDEX IF NOT EXISTS idx_lead_engagement_profiles_org_id 
+  ON lead_engagement_profiles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_lead_engagement_profiles_updated_at 
+  ON lead_engagement_profiles(updated_at DESC);
+
+ALTER TABLE lead_engagement_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view engagement profiles of their organization"
+  ON lead_engagement_profiles FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "System can update engagement profiles"
+  ON lead_engagement_profiles FOR UPDATE
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 2: Conversation Metadata
+-- Extracts and stores key information from conversations
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS conversation_metadata (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Extracted information
+  topics_extracted JSONB DEFAULT '{}'::jsonb, -- {budget: "$3000", timeline: "Feb 15"}
+  key_information JSONB DEFAULT '{}'::jsonb, -- {capacity: 4, check_in: "2026-02-15", ...}
+  
+  -- Quality metrics
+  sentiment TEXT DEFAULT 'neutral', -- positive|neutral|negative|frustrated
+  confidence_score FLOAT DEFAULT 0.5, -- AI confidence 0-1
+  
+  -- Additional metadata
+  metadata JSONB DEFAULT '{}'::jsonb,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_metadata_conversation_id 
+  ON conversation_metadata(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_metadata_lead_id 
+  ON conversation_metadata(lead_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_metadata_created_at 
+  ON conversation_metadata(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversation_metadata_sentiment 
+  ON conversation_metadata(sentiment);
+
+ALTER TABLE conversation_metadata ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view conversation metadata of their organization"
+  ON conversation_metadata FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 3: Lead Qualification Scores
+-- Tracks lead qualification level (0-100) and status
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS lead_qualification_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Qualification metrics
+  score INTEGER DEFAULT 0, -- 0-100 scale
+  scoring_breakdown JSONB DEFAULT '{}'::jsonb, -- {budget: 25, timeline: 20, decision_maker: 15, ...}
+  
+  -- Lead status
+  status TEXT DEFAULT 'new', -- new|contacted|qualified|hot_lead|booked|lost
+  status_changed_at TIMESTAMP WITH TIME ZONE,
+  
+  -- Metadata
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  CONSTRAINT unique_lead_score UNIQUE(organization_id, lead_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_scores_lead_id 
+  ON lead_qualification_scores(lead_id);
+CREATE INDEX IF NOT EXISTS idx_qualification_scores_status 
+  ON lead_qualification_scores(status);
+CREATE INDEX IF NOT EXISTS idx_qualification_scores_score 
+  ON lead_qualification_scores(score DESC);
+CREATE INDEX IF NOT EXISTS idx_qualification_scores_org_status 
+  ON lead_qualification_scores(organization_id, status);
+
+ALTER TABLE lead_qualification_scores ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view qualification scores of their organization"
+  ON lead_qualification_scores FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 4: Qualification Events
+-- Logs events that impact lead qualification score
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS qualification_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Event details
+  event_type TEXT NOT NULL, -- budget_confirmed|timeline_known|decision_maker_identified|interest_expressed|objection_raised
+  event_value JSONB DEFAULT '{}'::jsonb, -- {budget: "$3000", timeline: "Feb 15", ...}
+  
+  -- Scoring impact
+  score_impact INTEGER DEFAULT 0, -- Points added/subtracted
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_events_lead_id 
+  ON qualification_events(lead_id);
+CREATE INDEX IF NOT EXISTS idx_qualification_events_event_type 
+  ON qualification_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_qualification_events_created_at 
+  ON qualification_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_qualification_events_org_lead 
+  ON qualification_events(organization_id, lead_id);
+
+ALTER TABLE qualification_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view qualification events of their organization"
+  ON qualification_events FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 5: Re-engagement Campaigns
+-- Tracks automatic re-engagement attempts for dormant leads
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS re_engagement_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Campaign details
+  campaign_type TEXT NOT NULL, -- budget_objection|time_objection|feature_interest|generic
+  message_sent TEXT,
+  
+  -- Campaign tracking
+  sent_at TIMESTAMP WITH TIME ZONE,
+  response_received BOOLEAN DEFAULT FALSE,
+  response_time_minutes INTEGER,
+  attempt_number INTEGER DEFAULT 1, -- 1st, 2nd, 3rd attempt
+  
+  -- Escalation
+  escalated_to_agent BOOLEAN DEFAULT FALSE,
+  escalated_at TIMESTAMP WITH TIME ZONE,
+  
+  -- Metadata
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_re_engagement_campaigns_lead_id 
+  ON re_engagement_campaigns(lead_id);
+CREATE INDEX IF NOT EXISTS idx_re_engagement_campaigns_sent_at 
+  ON re_engagement_campaigns(sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_re_engagement_campaigns_campaign_type 
+  ON re_engagement_campaigns(campaign_type);
+CREATE INDEX IF NOT EXISTS idx_re_engagement_campaigns_response_received 
+  ON re_engagement_campaigns(response_received);
+CREATE INDEX IF NOT EXISTS idx_re_engagement_campaigns_org_lead 
+  ON re_engagement_campaigns(organization_id, lead_id, sent_at DESC);
+
+ALTER TABLE re_engagement_campaigns ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view re-engagement campaigns of their organization"
+  ON re_engagement_campaigns FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 6: Re-engagement Templates
+-- Pre-defined message templates for re-engagement campaigns
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS re_engagement_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  
+  -- Template details
+  campaign_type TEXT NOT NULL,
+  template_text TEXT NOT NULL,
+  trigger_conditions JSONB DEFAULT '{}'::jsonb,
+  
+  -- Performance tracking
+  used_count INTEGER DEFAULT 0,
+  success_count INTEGER DEFAULT 0,
+  success_rate FLOAT DEFAULT 0.0,
+  
+  -- Lifecycle
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_re_engagement_templates_org_campaign 
+  ON re_engagement_templates(organization_id, campaign_type);
+CREATE INDEX IF NOT EXISTS idx_re_engagement_templates_enabled 
+  ON re_engagement_templates(enabled);
+
+ALTER TABLE re_engagement_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view re-engagement templates of their organization"
+  ON re_engagement_templates FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 7: Handoff Events
+-- Tracks escalations from AI to human agents with context
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS handoff_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  
+  -- Handoff trigger
+  trigger_reason TEXT NOT NULL, -- cant_answer|high_score|sentiment_drop|request_agent|timeout
+  
+  -- Handoff data package
+  handoff_data JSONB NOT NULL, -- {summary, score, requirements, objections, recommended_action}
+  
+  -- Agent assignment
+  assigned_to_agent UUID REFERENCES auth.users(id),
+  
+  -- Handoff status
+  completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  
+  -- Metadata
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_handoff_events_lead_id 
+  ON handoff_events(lead_id);
+CREATE INDEX IF NOT EXISTS idx_handoff_events_assigned_to_agent 
+  ON handoff_events(assigned_to_agent);
+CREATE INDEX IF NOT EXISTS idx_handoff_events_completed 
+  ON handoff_events(completed);
+CREATE INDEX IF NOT EXISTS idx_handoff_events_created_at 
+  ON handoff_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_handoff_events_org_assigned 
+  ON handoff_events(organization_id, assigned_to_agent, completed);
+
+ALTER TABLE handoff_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Agents can view handoff events assigned to them"
+  ON handoff_events FOR SELECT
+  USING (
+    assigned_to_agent = auth.uid() OR
+    organization_id IN (
+      SELECT organization_id FROM user_organizations 
+      WHERE user_id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- ============================================================================
+-- MIGRATION 8: Knowledge Base Performance
+-- Tracks which KB articles are most effective
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS knowledge_base_performance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  kb_article_id UUID NOT NULL REFERENCES knowledge_base(id) ON DELETE CASCADE,
+  
+  -- Usage metrics
+  shown_count INTEGER DEFAULT 0, -- Times article was shown to lead
+  clicked_count INTEGER DEFAULT 0, -- Times lead clicked/requested article
+  converted_count INTEGER DEFAULT 0, -- Times lead converted after seeing article
+  
+  -- Calculated metrics
+  conversion_rate FLOAT DEFAULT 0.0, -- converted / shown
+  click_through_rate FLOAT DEFAULT 0.0, -- clicked / shown
+  
+  -- Lifecycle
+  last_used TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  CONSTRAINT unique_kb_performance UNIQUE(organization_id, kb_article_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_performance_conversion_rate 
+  ON knowledge_base_performance(conversion_rate DESC);
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_performance_shown_count 
+  ON knowledge_base_performance(shown_count DESC);
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_performance_last_used 
+  ON knowledge_base_performance(last_used DESC);
+
+ALTER TABLE knowledge_base_performance ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view KB performance of their organization"
+  ON knowledge_base_performance FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 9: Knowledge Base Versions
+-- Version control for KB articles (track changes to pricing, availability, etc)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS knowledge_base_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  kb_article_id UUID NOT NULL REFERENCES knowledge_base(id) ON DELETE CASCADE,
+  
+  -- Version tracking
+  version_number INTEGER NOT NULL,
+  
+  -- Content
+  content TEXT NOT NULL,
+  
+  -- Change tracking
+  changed_fields JSONB DEFAULT '{}'::jsonb, -- {title: ["old", "new"], ...}
+  reason TEXT, -- e.g., "Updated pricing", "Seasonal adjustment"
+  
+  -- Lifecycle
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  CONSTRAINT unique_kb_version UNIQUE(kb_article_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_versions_kb_article_id 
+  ON knowledge_base_versions(kb_article_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_base_versions_created_at 
+  ON knowledge_base_versions(created_at DESC);
+
+ALTER TABLE knowledge_base_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view KB versions of their organization"
+  ON knowledge_base_versions FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 10: Performance Metrics
+-- Detailed tracking of AI response quality and engagement metrics
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS performance_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  
+  -- Metric classification
+  metric_type TEXT NOT NULL, -- response_time|confidence|sentiment|engagement_rate|conversion_rate|re_engagement_success
+  metric_value FLOAT NOT NULL,
+  
+  -- Context
+  context JSONB DEFAULT '{}'::jsonb, -- {lead_id, channel, agent_type, ...}
+  
+  -- Timestamp
+  recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_metric_type 
+  ON performance_metrics(metric_type);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_recorded_at 
+  ON performance_metrics(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_type_recorded 
+  ON performance_metrics(metric_type, recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_org_type_recorded 
+  ON performance_metrics(organization_id, metric_type, recorded_at DESC);
+
+ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view performance metrics of their organization"
+  ON performance_metrics FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 11: Analytics Snapshots
+-- Daily aggregated metrics for trending and historical analysis
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS analytics_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  
+  -- Date
+  snapshot_date DATE NOT NULL,
+  
+  -- Aggregated metrics
+  metrics JSONB NOT NULL, -- {response_time_avg, confidence_avg, engagement_rate, ...}
+  
+  -- Lifecycle
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  CONSTRAINT unique_analytics_snapshot UNIQUE(organization_id, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_snapshot_date 
+  ON analytics_snapshots(snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_org_date 
+  ON analytics_snapshots(organization_id, snapshot_date DESC);
+
+ALTER TABLE analytics_snapshots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view analytics snapshots of their organization"
+  ON analytics_snapshots FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 12: Alert Rules
+-- Configurable rules for alerting admins to issues
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS alert_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  
+  -- Rule details
+  name TEXT NOT NULL,
+  description TEXT,
+  
+  -- Condition
+  condition JSONB NOT NULL, -- {metric: "engagement_rate", operator: "<", value: 0.5}
+  
+  -- Notification
+  alert_to_user_id UUID NOT NULL REFERENCES auth.users(id),
+  
+  -- Lifecycle
+  enabled BOOLEAN DEFAULT TRUE,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_rules_organization_id 
+  ON alert_rules(organization_id);
+CREATE INDEX IF NOT EXISTS idx_alert_rules_enabled 
+  ON alert_rules(enabled);
+CREATE INDEX IF NOT EXISTS idx_alert_rules_alert_to_user_id 
+  ON alert_rules(alert_to_user_id);
+
+ALTER TABLE alert_rules ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view alert rules of their organization"
+  ON alert_rules FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- MIGRATION 13: Alert History
+-- Log of triggered alerts for audit trail
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS alert_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  alert_rule_id UUID NOT NULL REFERENCES alert_rules(id),
+  
+  -- Alert details
+  message TEXT,
+  severity TEXT DEFAULT 'medium', -- low|medium|high|critical
+  
+  -- Acknowledging
+  acknowledged BOOLEAN DEFAULT FALSE,
+  acknowledged_by UUID REFERENCES auth.users(id),
+  acknowledged_at TIMESTAMP WITH TIME ZONE,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_history_alert_rule_id 
+  ON alert_history(alert_rule_id);
+CREATE INDEX IF NOT EXISTS idx_alert_history_created_at 
+  ON alert_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alert_history_acknowledged 
+  ON alert_history(acknowledged);
+CREATE INDEX IF NOT EXISTS idx_alert_history_org_created 
+  ON alert_history(organization_id, created_at DESC);
+
+ALTER TABLE alert_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view alert history of their organization"
+  ON alert_history FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM user_organizations 
+    WHERE user_id = auth.uid()
+  ));
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Run these queries to verify migration was successful:
+-- 
+-- SELECT table_name FROM information_schema.tables 
+-- WHERE table_schema = 'public' AND table_name ILIKE '%engagement%' OR table_name ILIKE '%qualification%';
+--
+-- SELECT COUNT(*) FROM information_schema.tables 
+-- WHERE table_schema = 'public' AND created >= NOW() - INTERVAL '1 hour';
+
