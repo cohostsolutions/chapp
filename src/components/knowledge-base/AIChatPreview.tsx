@@ -146,9 +146,9 @@ export function AIChatPreview({ open, onOpenChange }: AIChatPreviewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const agentType: AgentType = (orgAgentType || 'jay') as AgentType;
-  const config = agentConfig[agentType] || agentConfig.jay;
-  const onboardingContent = getAgentOnboardingContent(agentType);
+  const agentType: AgentType = (orgAgentType || 'cece') as AgentType;
+  const config = agentConfig[agentType] || agentConfig.cece;
+  const onboardingContent = getAgentOnboardingContent();
   const IconComponent = config.icon;
 
   // Fetch custom opening message

@@ -366,8 +366,6 @@ export function CrossOrgAnalytics() {
   }));
 
   const agentTypeDistribution = [
-    { name: 'Jay (Sales)', value: orgMetrics.filter(m => m.ai_agent_type === 'jay').length },
-    { name: 'May (Food)', value: orgMetrics.filter(m => m.ai_agent_type === 'may').length },
     { name: 'Cece (Hotel)', value: orgMetrics.filter(m => m.ai_agent_type === 'cece').length },
   ].filter(d => d.value > 0);
 

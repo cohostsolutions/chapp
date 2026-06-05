@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { trackEvent } from '@/hooks/useAnalyticsTracking';
 
-type AIType = 'jay' | 'may' | 'cece';
+type AIType = 'cece';
 type LanguageCode = 'en' | 'tl' | 'ceb' | 'ja' | 'zh';
 
 interface Message {
@@ -27,24 +27,6 @@ const languages: { code: LanguageCode; name: string; flag: string }[] = [
 ];
 
 const aiAgentConfig = {
-  jay: {
-    name: 'Jay',
-    role: 'Sales Agent',
-    icon: Bot,
-    color: 'from-primary to-primary/70',
-    bgColor: 'bg-primary/10',
-    textColor: 'text-primary',
-    defaultPrompt: 'I am a sales agent for a real estate investment company. We offer:\n- Luxury Condo (from 5.0M) [IMAGE: https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400]\n- Family Home (from 8.0M) [IMAGE: https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400]\n- Commercial Space (from 10.0M) [IMAGE: https://images.unsplash.com/photo-1497366216548-37526070297c?w=400]\nI help qualify leads, answer questions about properties, and schedule viewings.',
-  },
-  may: {
-    name: 'May',
-    role: 'Food Business',
-    icon: Utensils,
-    color: 'from-orange-500 to-amber-500',
-    bgColor: 'bg-orange-500/10',
-    textColor: 'text-orange-500',
-    defaultPrompt: 'I am a food ordering assistant for a Filipino restaurant. Our menu includes:\n- Crispy Pork Belly (from 280) [IMAGE: https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?w=400]\n- Grilled Salmon (from 350) [IMAGE: https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400]\n- Sinigang na Baboy (from 220) [IMAGE: https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400]\n- Chicken Adobo (from 180) [IMAGE: https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400]\nI take orders and schedule pickups.',
-  },
   cece: {
     name: 'Cece',
     role: 'Hotel Concierge',
@@ -129,9 +111,9 @@ interface AITestChatProps {
 }
 
 export function AITestChat({ onGetStarted }: AITestChatProps) {
-  const [selectedAI, setSelectedAI] = useState<AIType>('jay');
+  const [selectedAI, setSelectedAI] = useState<AIType>('cece');
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
-  const [knowledgeBase, setKnowledgeBase] = useState(aiAgentConfig.jay.defaultPrompt);
+  const [knowledgeBase, setKnowledgeBase] = useState(aiAgentConfig.cece.defaultPrompt);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);

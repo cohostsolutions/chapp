@@ -440,16 +440,8 @@ export default function Organizations() {
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      {org.ai_agent_type === 'may' ? (
-                        <ShoppingBag className="w-4 h-4" />
-                      ) : org.ai_agent_type === 'cece' ? (
-                        <BedDouble className="w-4 h-4" />
-                      ) : (
-                        <UserCheck className="w-4 h-4" />
-                      )}
-                      <span className="text-xs">
-                        {org.ai_agent_type === 'may' ? 'Orders' : org.ai_agent_type === 'cece' ? 'Bookings' : 'Leads'}
-                      </span>
+                      <BedDouble className="w-4 h-4" />
+                      <span className="text-xs">Bookings</span>
                     </div>
                     <p className="text-xl font-bold mt-1 text-foreground">{org.primaryCount}</p>
                   </div>

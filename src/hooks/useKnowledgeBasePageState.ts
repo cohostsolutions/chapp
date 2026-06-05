@@ -160,8 +160,6 @@ export function useKnowledgeBasePageState({
     processFiles,
   });
 
-  const isJayOrg = aiAgentType === 'jay';
-
   const isReviewStale = useCallback((entry: KnowledgeEntry) => {
     if (!entry.reviewed_at) return true;
 
@@ -606,7 +604,6 @@ export function useKnowledgeBasePageState({
     setShowDocuments,
     showChatPreview,
     setShowChatPreview,
-    isJayOrg,
     searchQuery,
     setSearchQuery,
     statusFilter,

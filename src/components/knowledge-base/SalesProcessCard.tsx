@@ -39,7 +39,7 @@ interface SalesProcessCardProps {
   }>>;
   qualificationQuestionsText: string;
   setQualificationQuestionsText: (value: string) => void;
-  isJayOrg: boolean;
+
   isSaving: boolean;
   onSave: () => void;
 }
@@ -56,7 +56,6 @@ export function SalesProcessCard({
   setRequiredInfoText,
   qualificationQuestionsText,
   setQualificationQuestionsText,
-  isJayOrg,
   isSaving,
   onSave,
 }: SalesProcessCardProps) {
@@ -180,15 +179,9 @@ export function SalesProcessCard({
 
               <TabsContent value="conversion" className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Define what constitutes a successful conversion for each type relevant to your business.
-                  {isJayOrg && (
-                    <span className="block mt-1 text-xs text-primary">
-                      Jay AI is optimized for sales. Reservation and order options are available for May and Cece organizations.
-                    </span>
-                  )}
+                  Define what constitutes a successful conversion for your business.
                 </p>
 
-                {!isJayOrg && (
                   <div className="border rounded-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -266,7 +259,6 @@ export function SalesProcessCard({
                   )}
                 </div>
 
-                {!isJayOrg && (
                   <div className="border rounded-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -304,7 +296,6 @@ export function SalesProcessCard({
                       </div>
                     )}
                   </div>
-                )}
               </TabsContent>
 
               <TabsContent value="confirmation" className="space-y-4">

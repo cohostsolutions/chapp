@@ -83,8 +83,8 @@ export function NotificationSettings() {
 
   // Determine org type and role
   const orgTypeData = orgFeatures as unknown as { ai_agent_type?: string } | null;
-  const orgType = (orgTypeData?.ai_agent_type || 'jay') as keyof typeof orgTypeConfig;
-  const config = orgTypeConfig[orgType] || orgTypeConfig.jay;
+  const orgType = (orgTypeData?.ai_agent_type || 'cece') as keyof typeof orgTypeConfig;
+  const config = orgTypeConfig[orgType] || orgTypeConfig.cece;
 
   // Determine what settings to show based on effective role
   const showAgentSettings = effectiveIsAgent || effectiveIsClientAdmin || isSuperAdmin;
@@ -758,7 +758,7 @@ export function NotificationSettings() {
         {/* Advanced Tab */}
         <TabsContent value="advanced" className="space-y-4 mt-4">
           {/* Value-based Alerts */}
-          {(showAdminSettings && (orgType === 'may' || orgType === 'cece')) && (
+          {(showAdminSettings && orgType === 'cece') && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -779,21 +779,6 @@ export function NotificationSettings() {
                 
                 {preferences.value_alerts_enabled && (
                   <>
-                    {orgType === 'may' && (
-                      <div className="space-y-2">
-                        <Label>Minimum Order Value ({currencySymbol})</Label>
-                        <Input
-                          type="number"
-                          value={preferences.min_order_value}
-                          onChange={(e) => updatePreferences({ min_order_value: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                          disabled={isUpdating}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Only notify for orders above this value
-                        </p>
-                      </div>
-                    )}
                     {orgType === 'cece' && (
                       <div className="space-y-2">
                         <Label>Minimum Booking Value ({currencySymbol})</Label>

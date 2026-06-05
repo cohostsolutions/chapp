@@ -1461,8 +1461,6 @@ function SettingsContent() {
                 </CardHeader>
                 <CollapsibleContent>
                   <CardContent className="space-y-6">
-                    {currentOrg?.ai_agent_type === 'jay' && <AgentPriorityConfig />}
-
                     <Card className="glass border-border/60">
                       <CardHeader>
                         <div className="flex items-center gap-2">

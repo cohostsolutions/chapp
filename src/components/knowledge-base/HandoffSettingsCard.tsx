@@ -49,7 +49,7 @@ export function HandoffSettingsCard({
   isSavingHandback,
   onSaveHandback,
 }: HandoffSettingsCardProps) {
-  const agentLabel = aiAgentType === 'cece' ? 'Cece' : aiAgentType === 'may' ? 'May' : 'Jay';
+  const agentLabel = 'Cece';
   const takeoverPromptMissing = takeoverCriteria.enabled && !takeoverCriteria.criteria_prompt.trim();
   const handbackPromptMissing = handbackCriteria.enabled && !handbackCriteria.criteria_prompt.trim();
 

@@ -124,7 +124,6 @@ function KnowledgeBaseContent() {
     setShowDocuments,
     showChatPreview,
     setShowChatPreview,
-    isJayOrg,
     searchQuery,
     setSearchQuery,
     statusFilter,
@@ -351,7 +350,6 @@ function KnowledgeBaseContent() {
             setRequiredInfoText={setRequiredInfoText}
             qualificationQuestionsText={qualificationQuestionsText}
             setQualificationQuestionsText={setQualificationQuestionsText}
-            isJayOrg={isJayOrg}
             isSaving={isSavingSalesProcess}
             onSave={handleSaveSalesProcess}
           />
