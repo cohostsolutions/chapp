@@ -118,7 +118,6 @@
     "vitest": "^4.1.2"
   },
   "overrides": {
-    "esbuild": "0.25.0",
     "serialize-javascript": "git+https://github.com/yahoo/serialize-javascript.git#df3f1c1fa9ca16b050ae893cb63ac23c91deed55"
   }
 }
